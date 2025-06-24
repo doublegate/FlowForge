@@ -6,9 +6,9 @@
 ## Base URL
 
 ```ascii
-Development: http://localhost:3001/api
+Development: http://localhost:3002/api
 Production: https://api.flowforge.dev/api
-Desktop: http://localhost:3001/api (embedded in Flatpak)
+Desktop: http://localhost:3002/api (embedded in Flatpak)
 ```
 
 ## Authentication
@@ -386,7 +386,7 @@ The API will support webhooks for:
 import axios from 'axios';
 
 const flowforgeAPI = axios.create({
-  baseURL: 'http://localhost:3001/api',
+  baseURL: 'http://localhost:3002/api',
   headers: {
     'Content-Type': 'application/json'
   }
@@ -408,7 +408,7 @@ const workflow = await flowforgeAPI.post('/ai/generate', {
 ```python
 import requests
 
-BASE_URL = 'http://localhost:3001/api'
+BASE_URL = 'http://localhost:3002/api'
 
 # List actions
 response = requests.get(f'{BASE_URL}/actions', params={
@@ -428,15 +428,15 @@ validation = response.json()
 
 ```bash
 # List actions
-curl "http://localhost:3001/api/actions?category=deployment&limit=10"
+curl "http://localhost:3002/api/actions?category=deployment&limit=10"
 
 # Generate workflow with AI
-curl -X POST http://localhost:3001/api/ai/generate \
+curl -X POST http://localhost:3002/api/ai/generate \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Create a Docker build and push workflow"}'
 
 # Validate workflow
-curl -X POST http://localhost:3001/api/workflows/validate \
+curl -X POST http://localhost:3002/api/workflows/validate \
   -H "Content-Type: application/json" \
   -d '{"yaml": "name: Test\non: [push]"}'
 ```

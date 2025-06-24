@@ -112,7 +112,7 @@ modules:
       env:
         npm_config_offline: 'true'
         npm_config_cache: flatpak-node/npm-cache
-        VITE_API_URL: 'http://localhost:3001'
+        VITE_API_URL: 'http://localhost:3002'
     build-commands:
       # Install frontend dependencies
       - npm install --offline --verbose --prefix=frontend
@@ -205,7 +205,7 @@ modules:
             const env = {
               ...process.env,
               NODE_ENV: 'production',
-              PORT: '3001',
+              PORT: '3002',
               MONGODB_URI: 'mongodb://localhost:27017/flowforge',
               FRONTEND_URL: 'http://localhost:8080'
             };

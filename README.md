@@ -6,10 +6,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.3.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.3.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
-  <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status">
+  <img src="https://img.shields.io/badge/status-stable-green.svg" alt="Status">
 </p>
 
 FlowForge is a powerful visual workflow builder for GitHub Actions that combines drag-and-drop simplicity with AI-powered assistance. Create complex CI/CD pipelines without writing YAML by hand.
@@ -79,7 +79,7 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 
 5. **Access the application**
    - Frontend: <http://localhost:5173>
-   - API: <http://localhost:3001>
+   - API: <http://localhost:3002>
 
 ### Desktop Build
 

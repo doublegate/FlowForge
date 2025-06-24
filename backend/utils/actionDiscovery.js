@@ -20,7 +20,7 @@ const axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
 const cheerio = require('cheerio');
-const LRU = require('lru-cache');
+const { LRUCache } = require('lru-cache');
 
 // Initialize GitHub API client
 const octokit = new Octokit({
@@ -29,7 +29,7 @@ const octokit = new Octokit({
 });
 
 // Cache configuration for API responses
-const cache = new LRU({
+const cache = new LRUCache({
   max: 500, // Maximum number of items
   ttl: 1000 * 60 * 60 * 6, // 6 hours TTL
   updateAgeOnGet: true,

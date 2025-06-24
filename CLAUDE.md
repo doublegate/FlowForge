@@ -101,7 +101,7 @@ Required environment variables (create `.env` from `.env.example`):
 MONGODB_URI=mongodb://localhost:27017/flowforge
 GITHUB_TOKEN=your_github_personal_access_token  # For API access
 OPENAI_API_KEY=your_openai_api_key             # For AI features
-PORT=3001                                       # Backend port
+PORT=3002                                       # Backend port
 FRONTEND_URL=http://localhost:5173              # For CORS
 ```
 

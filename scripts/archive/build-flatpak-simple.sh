@@ -149,7 +149,7 @@ modules:
             # FlowForge Configuration
             MONGODB_URI=mongodb://localhost:27017/flowforge
             NODE_ENV=production
-            PORT=3001
+            PORT=3002
             FRONTEND_URL=http://localhost:5173
             SESSION_SECRET=$(openssl rand -base64 32)
             

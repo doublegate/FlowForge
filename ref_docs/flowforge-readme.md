@@ -185,7 +185,7 @@ docker-compose down
 2. **Configure API Endpoint**
    ```javascript
    // frontend/src/config.js
-   export const API_URL = process.env.VITE_API_URL || 'http://localhost:3001';
+   export const API_URL = process.env.VITE_API_URL || 'http://localhost:3002';
    ```
 
 3. **Build for Production**

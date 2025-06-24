@@ -53,7 +53,7 @@ MONGODB_URI=mongodb://localhost:27017/flowforge
 
 # Server Configuration
 NODE_ENV=production
-PORT=3001
+PORT=3002
 EOL
 
 echo ""

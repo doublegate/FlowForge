@@ -7,7 +7,7 @@ let backendProcess;
 let mongoProcess;
 
 // Configuration
-const BACKEND_PORT = process.env.PORT || 3001;
+const BACKEND_PORT = process.env.PORT || 3002;
 const FRONTEND_PORT = process.env.FRONTEND_PORT || 5173;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 

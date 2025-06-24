@@ -40,7 +40,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 
 // Initialize services
 const githubToken = process.env.GITHUB_TOKEN;
@@ -1085,12 +1085,16 @@ app.post('/api/actions/update', async (req, res) => {
 // Initialize server
 async function startServer() {
   try {
-    // Wait for MongoDB connection
+    // Wait for MongoDB connection FIRST
     await mongoose.connection.asPromise();
     console.log('Connected to MongoDB');
 
-    // Start server
-    app.listen(PORT, () => {
+    // Only start server AFTER database is confirmed working
+    const server = app.listen(PORT, (err) => {
+      if (err) {
+        console.error('Failed to start server:', err);
+        process.exit(1);
+      }
       console.log(`FlowForge API server running on port ${PORT}`);
     });
 

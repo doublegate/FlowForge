@@ -22,7 +22,7 @@ Create a `.env` file in the root directory:
 ```bash
 # Backend Configuration
 NODE_ENV=production
-PORT=3001
+PORT=3002
 
 # Database
 MONGODB_URI=mongodb://localhost:27017/flowforge
@@ -94,7 +94,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 
 5. **Access the application**
    - Frontend: <http://localhost>
-   - API: <http://localhost:3001/api/health>
+   - API: <http://localhost:3002/api/health>
 
 ### Option 2: Manual Deployment
 
@@ -164,7 +164,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
        }
 
        location /api {
-           proxy_pass http://localhost:3001;
+           proxy_pass http://localhost:3002;
            proxy_http_version 1.1;
            proxy_set_header Upgrade $http_upgrade;
            proxy_set_header Connection 'upgrade';
@@ -181,7 +181,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 1. **Launch EC2 instance**
    - Ubuntu 22.04 LTS
    - t3.medium or larger
-   - Security groups: 80, 443, 3001, 27017
+   - Security groups: 80, 443, 3002, 27017
 
 2. **Install Docker**
 
@@ -298,7 +298,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
          - name: backend
            image: flowforge/backend:latest
            ports:
-           - containerPort: 3001
+           - containerPort: 3002
            env:
            - name: MONGODB_URI
              valueFrom:

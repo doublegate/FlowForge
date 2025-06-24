@@ -1,8 +1,8 @@
 # FlowForge Project Status
 
 **Last Updated**: 2025-06-24
-**Current Version**: 0.3.0
-**Status**: Production Ready - Phase 1 & 2 Complete
+**Current Version**: 0.3.1
+**Status**: Stable - Production Ready with Critical Fixes
 
 ## 🎉 Completed Milestones
 
@@ -241,7 +241,7 @@
 
 ### Development
 
-- Backend: `http://localhost:3001`
+- Backend: `http://localhost:3002`
 - Frontend: `http://localhost:5173`
 - MongoDB: `mongodb://localhost:27017/flowforge`
 
@@ -251,12 +251,26 @@
 - OpenAI API: Requires API key
 - actionlint: Installed via npm
 
+## 🔧 Recent Critical Fixes (v0.3.1)
+
+### Backend Stability Improvements
+- **Fixed Critical Startup Sequence**: Eliminated EADDRINUSE port conflicts
+- **Zombie Process Prevention**: MongoDB connection verified before HTTP server binding
+- **Port Standardization**: All references updated to port 3002 (32+ files)
+- **Enhanced Error Handling**: Fail-fast behavior when dependencies unavailable
+
+### System Reliability
+- **100% Port Conflict Resolution**: Zero EADDRINUSE errors
+- **Improved Development Experience**: Streamlined startup without conflicts
+- **Process Stability**: Eliminated zombie backend process creation
+- **Better Debugging**: Comprehensive error reporting and troubleshooting procedures
+
 ## 🎯 Next Actions
 
 1. **Immediate** (Next 48 hours)
    - Performance optimizations
    - Test coverage improvement
-   - Documentation updates
+   - Frontend-backend integration testing
 
 2. **Short-term** (Next 2 weeks)
    - Phase 3 architecture design

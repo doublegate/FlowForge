@@ -15,18 +15,11 @@ const ActionSchema = new mongoose.Schema({
   lastUpdated: Date,
   inputs: {
     type: Map,
-    of: {
-      description: String,
-      required: Boolean,
-      default: String,
-      type: String
-    }
+    of: mongoose.Schema.Types.Mixed
   },
   outputs: {
     type: Map,
-    of: {
-      description: String
-    }
+    of: mongoose.Schema.Types.Mixed
   },
   runs: {
     using: String,

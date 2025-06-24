@@ -12,10 +12,7 @@ const mongoose = require('mongoose');
 const { fetchAwesomeActions, fetchActionMetadata } = require('../utils/actionDiscovery');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/flowforge', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/flowforge');
 
 // Import Action model
 const Action = require('../models/Action');

@@ -19,7 +19,7 @@ services:
     container_name: flowforge-backend
     restart: always
     ports:
-      - "3001:3001"
+      - "3002:3002"
     environment:
       NODE_ENV: production
       MONGODB_URI: mongodb://admin:flowforge123@mongodb:27017/flowforge?authSource=admin

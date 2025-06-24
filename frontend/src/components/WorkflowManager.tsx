@@ -126,36 +126,101 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
     }
   };
 
-  const generateYamlFromFlow = (nodes: any[], _edges: any[]) => {
+  const generateYamlFromFlow = (nodes: any[], edges: any[]) => {
+    // Group nodes by job (using position or custom grouping logic)
+    // For now, we'll create jobs based on node connections
+    const jobs: Record<string, any> = {};
+    const nodeToJob: Record<string, string> = {};
+    const jobDependencies: Record<string, string[]> = {};
+    
+    // Simple algorithm: nodes without incoming edges start new jobs
+    // Connected nodes belong to the same job
+    let jobCounter = 1;
+    
+    // First pass: assign nodes to jobs
+    nodes.forEach((node) => {
+      const incomingEdges = edges.filter(e => e.target === node.id);
+      const outgoingEdges = edges.filter(e => e.source === node.id);
+      
+      if (incomingEdges.length === 0) {
+        // Start of a new job chain
+        const jobName = `job_${jobCounter++}`;
+        nodeToJob[node.id] = jobName;
+      } else {
+        // Check if source nodes are in different jobs
+        const sourceJobs = new Set(
+          incomingEdges
+            .map(e => nodeToJob[edges.find(edge => edge.id === e.id)?.source || ''])
+            .filter(Boolean)
+        );
+        
+        if (sourceJobs.size > 1) {
+          // Multiple jobs feed into this node - create new job
+          const jobName = `job_${jobCounter++}`;
+          nodeToJob[node.id] = jobName;
+          // Track dependencies
+          jobDependencies[jobName] = Array.from(sourceJobs);
+        } else if (sourceJobs.size === 1) {
+          // Continue in the same job
+          nodeToJob[node.id] = Array.from(sourceJobs)[0];
+        } else {
+          // Fallback - create new job
+          const jobName = `job_${jobCounter++}`;
+          nodeToJob[node.id] = jobName;
+        }
+      }
+    });
+    
+    // Second pass: build job definitions
+    Object.entries(nodeToJob).forEach(([nodeId, jobName]) => {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      
+      if (!jobs[jobName]) {
+        jobs[jobName] = {
+          'runs-on': 'ubuntu-latest',
+          steps: []
+        };
+        
+        // Add dependencies if any
+        if (jobDependencies[jobName]?.length > 0) {
+          jobs[jobName].needs = jobDependencies[jobName];
+        }
+      }
+      
+      const step: any = {};
+      
+      if (node.data.repository === 'run') {
+        step.run = node.data.inputs?.command || 'echo "Add command"';
+      } else {
+        step.uses = node.data.repository;
+        if (node.data.inputs) {
+          step.with = {};
+          Object.entries(node.data.inputs).forEach(([key, value]: [string, any]) => {
+            if (typeof value === 'string') {
+              step.with[key] = value;
+            } else if (value.default) {
+              step.with[key] = value.default;
+            }
+          });
+        }
+      }
+      
+      step.name = node.data.name;
+      jobs[jobName].steps.push(step);
+    });
+    
+    // Build final workflow
     const workflow = {
       name: workflowName || 'My Workflow',
       on: ['push'],
-      jobs: {
+      jobs: Object.keys(jobs).length > 0 ? jobs : {
         build: {
           'runs-on': 'ubuntu-latest',
-          steps: nodes.map((node) => {
-            const step: any = {};
-            
-            if (node.data.repository === 'run') {
-              step.run = node.data.inputs?.command || 'echo "Add command"';
-            } else {
-              step.uses = node.data.repository;
-              if (node.data.inputs) {
-                step.with = {};
-                Object.entries(node.data.inputs).forEach(([key, value]: [string, any]) => {
-                  if (typeof value === 'string') {
-                    step.with[key] = value;
-                  } else if (value.default) {
-                    step.with[key] = value.default;
-                  }
-                });
-              }
-            }
-            
-            step.name = node.data.name;
-            
-            return step;
-          })
+          steps: [{
+            name: 'Placeholder',
+            run: 'echo "Add workflow steps"'
+          }]
         }
       }
     };

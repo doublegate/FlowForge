@@ -532,9 +532,33 @@ pip install build`
 ];
 
 /**
+ * Transform action data to match Mongoose schema with Map types
+ */
+function transformActionData(action) {
+  const transformed = { ...action };
+  
+  // Convert inputs object to Map
+  if (action.inputs) {
+    transformed.inputs = new Map(Object.entries(action.inputs));
+  }
+  
+  // Convert outputs object to Map
+  if (action.outputs) {
+    transformed.outputs = new Map(Object.entries(action.outputs));
+  }
+  
+  // Add lastUpdated if not present
+  if (!transformed.lastUpdated) {
+    transformed.lastUpdated = new Date();
+  }
+  
+  return transformed;
+}
+
+/**
  * Sample GitHub Actions to seed the database
  */
-const _sampleActions = [
+const sampleActions = [
   {
     name: 'Checkout',
     description: 'Checkout a Git repository at a particular version',
@@ -717,10 +741,9 @@ async function seedDatabase() {
     console.log(`✅ Inserted ${insertedTemplates.length} workflow templates`);
 
     // Insert sample actions
-    // TODO: Fix Map/Object schema mismatch
-    // const insertedActions = await Action.insertMany(sampleActions);
-    // console.log(`✅ Inserted ${insertedActions.length} sample actions`);
-    const insertedActions = [];
+    const transformedActions = sampleActions.map(transformActionData);
+    const insertedActions = await Action.insertMany(transformedActions);
+    console.log(`✅ Inserted ${insertedActions.length} sample actions`);
 
     // Log summary
     console.log('\n📊 Seeding Summary:');

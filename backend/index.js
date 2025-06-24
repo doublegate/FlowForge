@@ -40,6 +40,9 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Initialize Express app
 const app = express();
+
+// Global server instance for graceful shutdown
+let server = null;
 const PORT = process.env.PORT || 3002;
 
 // Initialize services
@@ -1092,12 +1095,13 @@ async function startServer() {
     console.log('Connected to MongoDB');
 
     // Only start server AFTER database is confirmed working
-    const _server = app.listen(PORT, (err) => {
+    server = app.listen(PORT, (err) => {
       if (err) {
         console.error('Failed to start server:', err);
         process.exit(1);
       }
       console.log(`FlowForge API server running on port ${PORT}`);
+      console.log(`Server PID: ${process.pid}`);
     });
 
     // Schedule periodic updates (every 6 hours)
@@ -1116,11 +1120,32 @@ async function startServer() {
 }
 
 // Handle graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully...');
-  await mongoose.connection.close();
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received, starting graceful shutdown...`);
+  
+  // Stop accepting new connections
+  if (server) {
+    console.log('Closing HTTP server...');
+    await new Promise((resolve) => {
+      server.close(resolve);
+    });
+    console.log('HTTP server closed');
+  }
+  
+  // Close database connection
+  if (mongoose.connection.readyState === 1) {
+    console.log('Closing MongoDB connection...');
+    await mongoose.connection.close();
+    console.log('MongoDB connection closed');
+  }
+  
+  console.log('Graceful shutdown complete');
   process.exit(0);
-});
+};
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // Start the server
 startServer();

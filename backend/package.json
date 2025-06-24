@@ -34,7 +34,8 @@
     "lru-cache": "^11.1.0",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
-    "openai": "^4.24.1"
+    "openai": "^4.24.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

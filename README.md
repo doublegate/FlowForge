@@ -2,6 +2,12 @@
 # FlowForge
 
 <p align="center">
+  <a href="images/FlowForge_logo.html">
+    <img src="https://via.placeholder.com/300x300/0d1117/58a6ff?text=FlowForge" alt="FlowForge Logo">
+  </a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
@@ -167,6 +173,12 @@ FlowForge is currently in **beta**. Core features including AI integration are c
 [![Star History Chart](https://api.star-history.com/svg?repos=doublegate/FlowForge&type=Date)](https://star-history.com/#doublegate/FlowForge&Date)
 
 ---
+
+<p align="center">
+  <a href="images/FlowForge_banner.html">
+    <img src="https://via.placeholder.com/1200x400/0d1117/58a6ff?text=FlowForge+Banner" alt="FlowForge Banner">
+  </a>
+</p>
 
 <p align="center">Made with ❤️ by the FlowForge Team</p>
 <!-- markdownlint-enable MD033 -->

@@ -579,14 +579,22 @@ app.get('/api/actions', apiLimiter, async (req, res) => {
     
     let query = {};
     if (category) {
-      query.category = category;
+      if (typeof category === 'string') {
+        query.category = { $eq: category };
+      } else {
+        return res.status(400).json({ error: 'Invalid category parameter' });
+      }
     }
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { repository: { $regex: search, $options: 'i' } }
-      ];
+      if (typeof search === 'string') {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { repository: { $regex: search, $options: 'i' } }
+        ];
+      } else {
+        return res.status(400).json({ error: 'Invalid search parameter' });
+      }
     }
 
     const actions = await Action.find(query)

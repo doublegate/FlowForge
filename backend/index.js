@@ -269,9 +269,9 @@ async function fetchActionMetadata(owner, repo) {
         repo,
         path: 'action.yml'
       });
-    } catch (e) {
+    } catch (_e) {
       // If action.yml not found, try action.yaml
-      if (e.status === 404) {
+      if (_e.status === 404) {
         try {
           actionFile = await octokit.repos.getContent({
             owner,
@@ -287,7 +287,7 @@ async function fetchActionMetadata(owner, repo) {
           throw e2;
         }
       } else {
-        throw e;
+        throw _e;
       }
     }
 
@@ -552,7 +552,7 @@ async function validateWorkflow(yamlContent) {
     // Clean up temp file on error
     try {
       await fs.unlink(tempFile);
-    } catch (e) {
+    } catch (_e) {
       // Ignore file cleanup errors
     }
     

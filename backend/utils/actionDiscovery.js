@@ -337,7 +337,7 @@ async function fetchActionYaml(owner, repo) {
       });
       
       return parseActionYaml(data);
-    } catch (error) {
+    } catch (_error) {
       // Continue to next path
     }
   }

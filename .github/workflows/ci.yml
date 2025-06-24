@@ -290,7 +290,7 @@ jobs:
 
       - name: 🧪 Test Docker Compose
         run: |
-          docker-compose -f docker-compose.yml config
+          docker compose -f docker-compose.yml config
           echo "✅ Docker Compose configuration is valid"
 
       - name: 🔄 Move Docker Cache
@@ -414,6 +414,7 @@ jobs:
           configPath: ./frontend/.lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true
+          artifactName: lighthouse-performance-results-${{ github.sha }}
 
   # Job 8: Release Management
   release:

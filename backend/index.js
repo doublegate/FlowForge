@@ -22,7 +22,6 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-// const _axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
 const OpenAI = require('openai');

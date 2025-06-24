@@ -16,10 +16,8 @@
  * @version 1.0.0
  */
 
-// const _axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
-// const _cheerio = require('cheerio');
 const { LRUCache } = require('lru-cache');
 
 // Ensure environment variables are loaded

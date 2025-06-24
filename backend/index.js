@@ -22,7 +22,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const _axios = require('axios');
+// const _axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
 const OpenAI = require('openai');
@@ -533,7 +533,7 @@ async function validateWorkflow(yamlContent) {
     await fs.writeFile(tempFile, yamlContent);
     
     // Run actionlint
-    const { stdout: _stdout, stderr } = await execAsync(`actionlint ${tempFile}`);
+    const { stderr } = await execAsync(`actionlint ${tempFile}`);
     
     // Clean up temp file
     await fs.unlink(tempFile);

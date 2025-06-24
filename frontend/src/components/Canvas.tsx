@@ -10,8 +10,11 @@ import ReactFlow, {
   useEdgesState,
   Connection,
   ReactFlowProvider,
+  ReactFlowInstance,
   Panel,
   BackgroundVariant,
+  NodeChange,
+  EdgeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { FileCode, Save, Download, Upload, Lightbulb, Undo, Redo, Trash2 } from 'lucide-react';
@@ -21,11 +24,12 @@ import yaml from 'js-yaml';
 import { ActionNode } from './nodes/ActionNode';
 import { YAMLPreview } from './YAMLPreview';
 import { NodeConfigPanel } from './NodeConfigPanel';
+import type { FlowNode, FlowEdge, NodeData } from '../types';
 
 interface CanvasProps {
-  onSave: (nodes: Node[], edges: Edge[], yamlContent: string) => void;
+  onSave: (nodes: FlowNode[], edges: FlowEdge[], yamlContent: string) => void;
   onShowSuggestions: () => void;
-  onAIWorkflowLoaded?: (nodes: Node[], edges: Edge[]) => void;
+  onAIWorkflowLoaded?: (nodes: FlowNode[], edges: FlowEdge[]) => void;
 }
 
 const nodeTypes = {
@@ -50,7 +54,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [historyIndex, setHistoryIndex] = useState(-1);
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   // Save current state to history
   const saveToHistory = useCallback((newNodes: Node[], newEdges: Edge[]) => {
@@ -76,11 +80,11 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, []);
 
   // Handle node updates
-  const onNodeChange = useCallback((changes: any) => {
+  const onNodeChange = useCallback((changes: NodeChange[]) => {
     onNodesChange(changes);
     // Save to history when nodes are modified (not just moved)
-    const hasNonPositionChange = changes.some((change: any) => 
-      change.type !== 'position' || !change.dragging
+    const hasNonPositionChange = changes.some((change) => 
+      change.type !== 'position' || (change.type === 'position' && !change.dragging)
     );
     if (hasNonPositionChange) {
       // Delay to allow the change to apply
@@ -94,7 +98,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, [onNodesChange, edges, saveToHistory, setNodes]);
 
   // Handle edge updates
-  const onEdgeChange = useCallback((changes: any) => {
+  const onEdgeChange = useCallback((changes: EdgeChange[]) => {
     onEdgesChange(changes);
     // Save to history when edges are modified
     setTimeout(() => {
@@ -192,7 +196,7 @@ export const Canvas: React.FC<CanvasProps> = ({
           'runs-on': 'ubuntu-latest',
           timeout: 30,
           steps: sortedNodes.map((node, index) => {
-            const step: any = {
+            const step: Record<string, unknown> = {
               id: node.id,
             };
 
@@ -207,7 +211,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               // Add inputs if they exist
               if (node.data.inputs && Object.keys(node.data.inputs).length > 0) {
                 step.with = {};
-                Object.entries(node.data.inputs).forEach(([key, value]: [string, any]) => {
+                Object.entries(node.data.inputs).forEach(([key, value]) => {
                   if (value && value !== '') {
                     step.with[key] = value;
                   }
@@ -282,16 +286,18 @@ export const Canvas: React.FC<CanvasProps> = ({
     reader.onload = (e) => {
       try {
         const yamlContent = e.target?.result as string;
-        const workflow = yaml.load(yamlContent) as any;
+        const workflow = yaml.load(yamlContent) as Record<string, unknown>;
         
         // Convert YAML workflow back to nodes and edges
         const newNodes: Node[] = [];
         const newEdges: Edge[] = [];
         
-        if (workflow.jobs) {
-          Object.entries(workflow.jobs).forEach(([jobName, job]: [string, any]) => {
-            if (job.steps) {
-              job.steps.forEach((step: any, index: number) => {
+        if (workflow.jobs && typeof workflow.jobs === 'object') {
+          Object.entries(workflow.jobs).forEach(([jobName, job]) => {
+            const jobData = job as Record<string, unknown>;
+            if (jobData.steps && Array.isArray(jobData.steps)) {
+              jobData.steps.forEach((step: unknown, index: number) => {
+                const stepData = step as Record<string, unknown>;
                 const nodeId = `${jobName}-${index}`;
                 
                 newNodes.push({
@@ -299,13 +305,13 @@ export const Canvas: React.FC<CanvasProps> = ({
                   type: 'action',
                   position: { x: 250, y: 100 + index * 120 },
                   data: {
-                    name: step.name || `Step ${index + 1}`,
-                    repository: step.uses || 'run',
-                    inputs: step.with || {},
-                    env: step.env || {},
-                    condition: step.if,
-                    continueOnError: step['continue-on-error'],
-                    command: step.run,
+                    name: (stepData.name as string) || `Step ${index + 1}`,
+                    repository: (stepData.uses as string) || 'run',
+                    inputs: (stepData.with as Record<string, string>) || {},
+                    env: (stepData.env as Record<string, string>) || {},
+                    condition: stepData.if as string,
+                    continueOnError: stepData['continue-on-error'] as boolean,
+                    command: stepData.run as string,
                     category: 'imported'
                   }
                 });
@@ -346,7 +352,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, [nodes.length, setNodes, setEdges, saveToHistory]);
 
   // Update node data
-  const updateNodeData = useCallback((nodeId: string, newData: any) => {
+  const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === nodeId) {

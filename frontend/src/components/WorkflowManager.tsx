@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Upload, Trash2, FolderOpen, X } from 'lucide-react';
 import { apiService } from '../services/api';
+import type { FlowNode, FlowEdge } from '../types';
 
 interface Workflow {
   _id: string;
@@ -14,10 +15,16 @@ interface Workflow {
 
 interface WorkflowManagerProps {
   onClose: () => void;
+  nodes?: FlowNode[];
+  edges?: FlowEdge[];
+  onLoadWorkflow?: (nodes: FlowNode[], edges: FlowEdge[]) => void;
 }
 
 export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
-  onClose
+  onClose,
+  nodes = [],
+  edges = [],
+  onLoadWorkflow
 }) => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,7 +106,7 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
       const response = await apiService.getWorkflow(workflow._id);
       const fullWorkflow = response.data;
       
-      if (fullWorkflow.nodes && fullWorkflow.edges) {
+      if (fullWorkflow.nodes && fullWorkflow.edges && onLoadWorkflow) {
         onLoadWorkflow(fullWorkflow.nodes, fullWorkflow.edges);
         onClose();
       }
@@ -126,10 +133,10 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
     }
   };
 
-  const generateYamlFromFlow = (nodes: any[], edges: any[]) => {
+  const generateYamlFromFlow = (nodes: FlowNode[], edges: FlowEdge[]) => {
     // Group nodes by job (using position or custom grouping logic)
     // For now, we'll create jobs based on node connections
-    const jobs: Record<string, any> = {};
+    const jobs: Record<string, Record<string, unknown>> = {};
     const nodeToJob: Record<string, string> = {};
     const jobDependencies: Record<string, string[]> = {};
     
@@ -140,7 +147,7 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
     // First pass: assign nodes to jobs
     nodes.forEach((node) => {
       const incomingEdges = edges.filter(e => e.target === node.id);
-      const outgoingEdges = edges.filter(e => e.source === node.id);
+      // const outgoingEdges = edges.filter(e => e.source === node.id);
       
       if (incomingEdges.length === 0) {
         // Start of a new job chain
@@ -188,7 +195,7 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
         }
       }
       
-      const step: any = {};
+      const step: Record<string, unknown> = {};
       
       if (node.data.repository === 'run') {
         step.run = node.data.inputs?.command || 'echo "Add command"';
@@ -196,7 +203,7 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
         step.uses = node.data.repository;
         if (node.data.inputs) {
           step.with = {};
-          Object.entries(node.data.inputs).forEach(([key, value]: [string, any]) => {
+          Object.entries(node.data.inputs).forEach(([key, value]) => {
             if (typeof value === 'string') {
               step.with[key] = value;
             } else if (value.default) {

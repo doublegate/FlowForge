@@ -7,6 +7,7 @@ import { Canvas } from './components/Canvas';
 import { WorkflowManager } from './components/WorkflowManager';
 import { WorkflowSuggestions } from './components/WorkflowSuggestions';
 import { apiService } from './services/api';
+import type { ActionMetadata, WorkflowGenerationResponse, FlowNode, FlowEdge } from './types';
 
 /**
  * FlowForge - GitHub Actions Workflow Builder
@@ -18,32 +19,22 @@ import { apiService } from './services/api';
  * @author FlowForge Team
  */
 
-interface ActionMetadata {
-  id: string;
-  name: string;
-  description: string;
-  repository: string;
-  category: string;
-  inputs?: Record<string, any>;
-  outputs?: Record<string, any>;
-}
-
 // Main FlowForge component
 const FlowForge = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showWorkflowManager, setShowWorkflowManager] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [_currentAction, setCurrentAction] = useState<ActionMetadata | null>(null);
+  const [, setCurrentAction] = useState<ActionMetadata | null>(null);
 
   // Handle AI workflow generation
-  const handleAIWorkflowGenerated = useCallback((aiResponse: any) => {
+  const handleAIWorkflowGenerated = useCallback((aiResponse: WorkflowGenerationResponse) => {
     console.log('AI workflow generated:', aiResponse);
     // The Canvas component will handle the workflow loading
   }, []);
 
   // Handle workflow save
-  const handleWorkflowSave = useCallback(async (nodes: any[], edges: any[], yamlContent: string) => {
+  const handleWorkflowSave = useCallback(async (nodes: FlowNode[], edges: FlowEdge[], yamlContent: string) => {
     try {
       const workflowData = {
         name: 'FlowForge Workflow',
@@ -57,7 +48,7 @@ const FlowForge = () => {
 
       await apiService.saveWorkflow(workflowData);
       setShowWorkflowManager(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to save workflow:', err);
       setError('Failed to save workflow. Please try again.');
     }

@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
 import { Bot, ChevronRight, Loader2, X, Lightbulb, Zap, AlertCircle } from 'lucide-react';
 import { apiService } from '../services/api';
+import type { WorkflowGenerationResponse } from '../types';
 
 interface AIAssistantProps {
-  onWorkflowGenerated: (workflow: any) => void;
+  onWorkflowGenerated: (workflow: WorkflowGenerationResponse) => void;
   onError: (error: string) => void;
 }
 
-interface AIResponse {
+interface AIResponse extends WorkflowGenerationResponse {
   name: string;
   description: string;
-  explanation: string;
-  workflow: any;
-  actions: any[];
-  suggestions: string[];
   generatedAt?: string;
   version?: string;
 }
@@ -63,8 +60,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       // Trigger workflow generation in parent component
       onWorkflowGenerated(aiResponse);
       
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.error || 'Failed to generate workflow. Please try again.';
+    } catch (err) {
+      const errorMessage = (err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to generate workflow. Please try again.';
       onError(errorMessage);
       
       // Add error to history

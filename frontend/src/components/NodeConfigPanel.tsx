@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Settings, Info, Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { Node } from 'reactflow';
+import type { NodeData, ActionInput } from '../types';
 
 interface NodeConfigPanelProps {
   node: Node;
-  onUpdate: (nodeId: string, data: any) => void;
+  onUpdate: (nodeId: string, data: Partial<NodeData>) => void;
   onClose: () => void;
 }
 
@@ -39,20 +40,21 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
     // Convert inputs to form format
     if (node.data.inputs) {
-      const inputFields: InputField[] = Object.entries(node.data.inputs).map(([key, value]: [string, any]) => {
-        if (typeof value === 'object' && value !== null) {
+      const inputFields: InputField[] = Object.entries(node.data.inputs).map(([key, value]) => {
+        const inputValue = value as ActionInput | string;
+        if (typeof inputValue === 'object' && inputValue !== null) {
           return {
             key,
-            value: value.default || '',
-            description: value.description,
-            required: value.required,
-            type: value.type,
-            options: value.options
+            value: inputValue.default || '',
+            description: inputValue.description,
+            required: inputValue.required,
+            type: inputValue.type,
+            options: (inputValue as { options?: string[] }).options
           };
         }
         return {
           key,
-          value: String(value || ''),
+          value: String(inputValue || ''),
         };
       });
       setInputs(inputFields);
@@ -108,7 +110,7 @@ export const NodeConfigPanel: React.FC<NodeConfigPanelProps> = ({
 
   const handleSave = () => {
     // Convert inputs back to object format
-    const inputsObj: Record<string, any> = {};
+    const inputsObj: Record<string, string | ActionInput> = {};
     inputs.forEach(input => {
       if (input.key.trim()) {
         inputsObj[input.key] = input.value;

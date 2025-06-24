@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { Lightbulb, TrendingUp, Shield, DollarSign, Zap, Package, X, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiService } from '../services/api';
+import type { FlowNode, FlowEdge, AISuggestion } from '../types';
 
-interface Suggestion {
+interface Suggestion extends AISuggestion {
   type: 'performance' | 'security' | 'best-practice' | 'cost' | 'reliability' | 'feature';
   priority: 'high' | 'medium' | 'low';
-  title: string;
-  description: string;
-  implementation: string;
   impact: string;
 }
 
 interface WorkflowSuggestionsProps {
-  nodes: any[];
-  edges: any[];
+  nodes: FlowNode[];
+  edges: FlowEdge[];
   onClose: () => void;
   onApplySuggestion?: (suggestion: Suggestion) => void;
 }
@@ -49,7 +47,7 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
           build: {
             'runs-on': 'ubuntu-latest',
             steps: nodes.map((node) => {
-              const step: any = {
+              const step: Record<string, unknown> = {
                 name: node.data.name
               };
               
@@ -73,9 +71,9 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
 
       setSuggestions(result.suggestions || []);
       setSummary(result.summary || '');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to get suggestions:', err);
-      setError(err.response?.data?.error || 'Failed to get suggestions. Please try again.');
+      setError((err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to get suggestions. Please try again.');
     } finally {
       setLoading(false);
     }

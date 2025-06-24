@@ -1,4 +1,8 @@
 import axios from 'axios';
+import type { 
+  WorkflowSuggestionsResponse, 
+  SavedWorkflow 
+} from '../types';
 
 // API configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
@@ -64,24 +68,24 @@ export const apiService = {
   // AI Assistant
   generateWorkflow: (prompt: string) => 
     api.post('/api/ai/generate-workflow', { prompt }),
-  getSuggestions: (workflow: any, context?: string) => 
-    api.post('/api/ai/suggest', { workflow, context }),
+  getSuggestions: (workflow: Record<string, unknown>, context?: string) => 
+    api.post<WorkflowSuggestionsResponse>('/api/ai/suggest', { workflow, context }),
 
   // Workflow validation
   validateWorkflow: (yaml: string) => 
     api.post('/api/workflows/validate', { yaml }),
-  optimizeWorkflow: (workflow: any) => 
+  optimizeWorkflow: (workflow: Record<string, unknown>) => 
     api.post('/api/workflows/optimize', { workflow }),
 
   // Workflow persistence (to be implemented)
-  saveWorkflow: (workflow: any) => 
-    api.post('/api/workflows', workflow),
+  saveWorkflow: (workflow: Partial<SavedWorkflow>) => 
+    api.post<SavedWorkflow>('/api/workflows', workflow),
   getWorkflows: () => 
     api.get('/api/workflows'),
   getWorkflow: (id: string) => 
     api.get(`/api/workflows/${id}`),
-  updateWorkflow: (id: string, workflow: any) => 
-    api.put(`/api/workflows/${id}`, workflow),
+  updateWorkflow: (id: string, workflow: Partial<SavedWorkflow>) => 
+    api.put<SavedWorkflow>(`/api/workflows/${id}`, workflow),
   deleteWorkflow: (id: string) => 
     api.delete(`/api/workflows/${id}`),
 };

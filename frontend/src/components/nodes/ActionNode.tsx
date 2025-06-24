@@ -1,18 +1,14 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { Settings, Play, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import type { NodeData } from '../../types';
 
-interface ActionNodeData {
-  name: string;
-  description?: string;
-  repository: string;
-  category: string;
-  inputs?: Record<string, any>;
+interface ActionNodeData extends NodeData {
+  status?: 'idle' | 'running' | 'success' | 'error';
   env?: Record<string, string>;
   condition?: string;
   continueOnError?: boolean;
   command?: string;
-  status?: 'idle' | 'running' | 'success' | 'error';
 }
 
 interface ActionNodeProps {

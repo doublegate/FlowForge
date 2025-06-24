@@ -301,7 +301,7 @@ function categorizeAction(metadata, repoName) {
   
   // If score is too low, check for technology-specific categorization
   if (bestScore < 0.5) {
-    for (const [_tech, keywords] of Object.entries(TECH_KEYWORDS)) {
+    for (const [, keywords] of Object.entries(TECH_KEYWORDS)) {
       if (keywords.some(keyword => features.allText.includes(keyword))) {
         bestCategory = 'setup'; // Most tech-specific actions are setup actions
         break;

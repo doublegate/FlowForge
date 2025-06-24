@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Zap, Filter, ChevronDown, ChevronRight } from 'lucide-react';
 import { apiService } from '../services/api';
+import type { ActionMetadata as ActionType, ActionInput, ActionOutput } from '../types';
 
-interface ActionMetadata {
+interface ActionMetadata extends Omit<ActionType, 'inputs' | 'outputs'> {
   id: string;
-  name: string;
-  description: string;
-  repository: string;
-  category: string;
-  stars?: number;
-  inputs?: Record<string, any>;
-  outputs?: Record<string, any>;
+  inputs?: Record<string, ActionInput>;
+  outputs?: Record<string, ActionOutput>;
 }
 
 interface Category {

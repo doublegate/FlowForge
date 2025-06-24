@@ -775,13 +775,14 @@ app.get('/api/templates', apiLimiter, async (req, res) => {
     
     let query = {};
     if (category) {
-      query.category = category;
+      query.category = { $eq: category }; // Use $eq to ensure category is treated as a literal value
     }
-    if (search) {
+    if (search && typeof search === 'string') { // Validate search is a string
+      const sanitizedSearch = search.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'); // Sanitize search input
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
+        { name: { $regex: sanitizedSearch, $options: 'i' } },
+        { description: { $regex: sanitizedSearch, $options: 'i' } },
+        { tags: { $in: [new RegExp(sanitizedSearch, 'i')] } }
       ];
     }
 

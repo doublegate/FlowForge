@@ -22,10 +22,25 @@ const { Octokit } = require('@octokit/rest');
 const cheerio = require('cheerio');
 const { LRUCache } = require('lru-cache');
 
-// Initialize GitHub API client
+// Ensure environment variables are loaded
+if (!process.env.GITHUB_TOKEN) {
+  console.warn('⚠️  GITHUB_TOKEN not found, GitHub API will be rate-limited');
+}
+
+// Initialize GitHub API client with enhanced configuration
 const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
-  userAgent: 'FlowForge/1.0'
+  userAgent: 'FlowForge/1.0',
+  throttle: {
+    onRateLimit: (retryAfter, options, octokit) => {
+      console.warn(`⚠️  Rate limit exceeded, retrying after ${retryAfter} seconds`);
+      return true; // Enable automatic retries
+    },
+    onAbuseLimit: (retryAfter, options, octokit) => {
+      console.warn(`⚠️  Abuse detection triggered, retrying after ${retryAfter} seconds`);
+      return true; // Enable automatic retries
+    }
+  }
 });
 
 // Cache configuration for API responses

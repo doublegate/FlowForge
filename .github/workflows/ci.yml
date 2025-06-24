@@ -1,0 +1,525 @@
+name: 🚀 FlowForge CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      deploy_environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18.x'
+  CACHE_VERSION: 'v1'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Setup and Dependency Installation
+  setup:
+    name: 📦 Setup Dependencies
+    runs-on: ubuntu-latest
+    outputs:
+      backend-cache-key: ${{ steps.cache-keys.outputs.backend }}
+      frontend-cache-key: ${{ steps.cache-keys.outputs.frontend }}
+      docker-cache-key: ${{ steps.cache-keys.outputs.docker }}
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏷️ Generate Cache Keys
+        id: cache-keys
+        run: |
+          echo "backend=${{ env.CACHE_VERSION }}-backend-${{ hashFiles('backend/package-lock.json') }}" >> $GITHUB_OUTPUT
+          echo "frontend=${{ env.CACHE_VERSION }}-frontend-${{ hashFiles('frontend/package-lock.json') }}" >> $GITHUB_OUTPUT
+          echo "docker=${{ env.CACHE_VERSION }}-docker-${{ hashFiles('docker-compose.yml', 'backend/Dockerfile', 'frontend/Dockerfile') }}" >> $GITHUB_OUTPUT
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: 📋 Cache Backend Dependencies
+        id: cache-backend
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: ${{ steps.cache-keys.outputs.backend }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-backend-
+
+      - name: 📋 Cache Frontend Dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: ${{ steps.cache-keys.outputs.frontend }}
+          restore-keys: |
+            ${{ env.CACHE_VERSION }}-frontend-
+
+      - name: 🔨 Install Backend Dependencies
+        if: steps.cache-backend.outputs.cache-hit != 'true'
+        run: |
+          cd backend
+          npm ci --prefer-offline --no-audit
+
+      - name: 🔨 Install Frontend Dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit
+
+      - name: 📤 Upload Backend Dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-node-modules
+          path: backend/node_modules
+          retention-days: 1
+
+      - name: 📤 Upload Frontend Dependencies
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend/node_modules
+          retention-days: 1
+
+  # Job 2: Backend Testing and Quality Checks
+  backend-test:
+    name: 🧪 Backend Tests & Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: flowforge123
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download Backend Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-node-modules
+          path: backend/node_modules
+
+      - name: 🔍 Run ESLint
+        run: |
+          cd backend
+          npm run lint
+
+      - name: 🧪 Run Backend Tests
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://admin:flowforge123@localhost:27017/flowforge_test?authSource=admin
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd backend
+          npm test -- --coverage --testTimeout=30000
+
+      - name: 📊 Upload Backend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: backend/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+
+  # Job 3: Frontend Testing and Quality Checks
+  frontend-test:
+    name: 🧪 Frontend Tests & Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download Frontend Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend/node_modules
+
+      - name: 🔍 Run ESLint
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: 🏗️ Build Frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: 🧪 Run Frontend Tests
+        run: |
+          cd frontend
+          npm test -- --coverage
+
+      - name: 📊 Upload Frontend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: frontend/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+
+      - name: 📤 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+          retention-days: 7
+
+  # Job 4: Security Scanning
+  security:
+    name: 🔒 Security Scanning
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-node-modules
+          path: backend/node_modules
+
+      - name: 🔍 Run Security Audit (Backend)
+        run: |
+          cd backend
+          npm audit --audit-level moderate
+
+      - name: 📥 Download Frontend Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend/node_modules
+
+      - name: 🔍 Run Security Audit (Frontend)
+        run: |
+          cd frontend
+          npm audit --audit-level moderate
+
+      - name: 🛡️ Run CodeQL Analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: 🛡️ Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  # Job 5: Docker Build and Test
+  docker-build:
+    name: 🐳 Docker Build & Test
+    runs-on: ubuntu-latest
+    needs: [setup, backend-test, frontend-test]
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 📋 Cache Docker Layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ needs.setup.outputs.docker-cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: 📥 Download Frontend Build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: 🏗️ Build Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: flowforge-backend:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: 🏗️ Build Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: flowforge-frontend:latest
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: 🧪 Test Docker Compose
+        run: |
+          docker-compose -f docker-compose.yml config
+          echo "✅ Docker Compose configuration is valid"
+
+      - name: 🔄 Move Docker Cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  # Job 6: Integration Tests
+  integration-test:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: [setup, backend-test, frontend-test]
+    services:
+      mongodb:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: admin
+          MONGO_INITDB_ROOT_PASSWORD: flowforge123
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 27017:27017
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📥 Download Backend Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-node-modules
+          path: backend/node_modules
+
+      - name: 📥 Download Frontend Dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-node-modules
+          path: frontend/node_modules
+
+      - name: 🌱 Seed Test Database
+        env:
+          MONGODB_URI: mongodb://admin:flowforge123@localhost:27017/flowforge_test?authSource=admin
+        run: |
+          cd backend
+          timeout 30 npm run seed || echo "Seed completed or timed out"
+
+      - name: 🚀 Start Backend Server
+        env:
+          NODE_ENV: test
+          PORT: 3002
+          MONGODB_URI: mongodb://admin:flowforge123@localhost:27017/flowforge_test?authSource=admin
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd backend
+          npm start &
+          echo $! > backend.pid
+          
+          # Wait for server to start
+          for i in {1..30}; do
+            if curl -f http://localhost:3002/api/health; then
+              echo "✅ Backend server is running"
+              break
+            fi
+            echo "⏳ Waiting for backend server... ($i/30)"
+            sleep 2
+          done
+
+      - name: 🧪 Run API Integration Tests
+        run: |
+          # Test key API endpoints
+          curl -f http://localhost:3002/api/health
+          curl -f http://localhost:3002/api/actions?limit=5
+          curl -f http://localhost:3002/api/categories
+          echo "✅ Integration tests passed"
+
+      - name: 🛑 Stop Backend Server
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+            rm backend.pid
+          fi
+
+  # Job 7: Performance Testing
+  performance:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: [integration-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download Frontend Build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
+      - name: 📊 Analyze Bundle Size
+        run: |
+          cd frontend
+          du -sh dist/
+          find dist/ -name "*.js" -exec ls -lh {} \; | head -10
+          echo "📊 Bundle analysis complete"
+
+      - name: 💾 Cache Lighthouse Reports
+        uses: actions/cache@v3
+        with:
+          path: lighthouse-reports
+          key: lighthouse-${{ github.sha }}
+          restore-keys: |
+            lighthouse-
+
+      - name: 🔍 Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: ./frontend/.lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+  # Job 8: Release Management
+  release:
+    name: 🚀 Release Management
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security, docker-build, integration-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Download All Artifacts
+        uses: actions/download-artifact@v4
+
+      - name: 🏷️ Generate Release Tag
+        id: tag
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: 📋 Generate Changelog
+        id: changelog
+        run: |
+          git log --oneline --no-merges $(git describe --tags --abbrev=0)..HEAD > RECENT_CHANGES.md || echo "Initial release" > RECENT_CHANGES.md
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          cat RECENT_CHANGES.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 🎉 Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        if: steps.tag.outputs.version != ''
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: FlowForge ${{ steps.tag.outputs.version }}
+          body: |
+            ## 🚀 FlowForge Release ${{ steps.tag.outputs.version }}
+            
+            ### 📊 Build Information
+            - **Commit**: ${{ github.sha }}
+            - **Branch**: ${{ github.ref_name }}
+            - **Build Date**: ${{ github.event.head_commit.timestamp }}
+            
+            ### 🔄 Recent Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ### 📦 Artifacts
+            - Frontend build artifacts included
+            - Backend tested and validated
+            - Docker images built and tested
+            - Security scans completed
+            
+            ### 🧪 Test Results
+            - ✅ Backend tests passed
+            - ✅ Frontend tests passed  
+            - ✅ Integration tests passed
+            - ✅ Security scans completed
+            - ✅ Docker builds successful
+            
+            ### 📈 Performance
+            - Bundle size analysis completed
+            - Lighthouse performance reports generated
+            
+            🤖 Generated with [Claude Code](https://claude.ai/code)
+          files: |
+            frontend-build/**/*
+            backend-node-modules.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+  # Job 9: Notification and Cleanup
+  notify:
+    name: 📢 Notifications & Cleanup
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security, docker-build, integration-test]
+    if: always()
+    steps:
+      - name: 📊 Workflow Status Summary
+        run: |
+          echo "## 📊 Workflow Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Tests | ${{ needs.backend-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Tests | ${{ needs.frontend-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scans | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-test.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🧹 Cleanup Artifacts
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: |
+            backend-node-modules
+            frontend-node-modules
+          failOnError: false

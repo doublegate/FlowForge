@@ -65,36 +65,62 @@ async function updateActions() {
       // Process batch items sequentially to avoid overwhelming the API
       for (const action of batch) {
         try {
-          // Fetch detailed metadata
+          // Fetch detailed metadata (could be action or array of workflows)
           const metadata = await fetchActionMetadata(action.owner, action.repo);
           
           if (!metadata) {
-            console.log(`⚠️  Skipping ${action.fullName} - no action file found`);
+            console.log(`⚠️  Skipping ${action.fullName} - no action or workflow found`);
             skipped++;
             continue;
           }
           
-          // Update or create action in database
-          await Action.findOneAndUpdate(
-            { repository: metadata.repository },
-            {
-              name: metadata.name,
-              description: metadata.description,
-              repository: metadata.repository,
-              category: metadata.category,
-              author: metadata.author,
-              stars: metadata.stars,
-              lastUpdated: metadata.lastUpdated,
-              inputs: metadata.inputs,
-              outputs: metadata.outputs,
-              runs: metadata.runs,
-              branding: metadata.branding
-            },
-            { upsert: true, new: true }
-          );
-          
-          console.log(`✅ Updated ${action.fullName}`);
-          updated++;
+          // Handle array of workflows
+          if (Array.isArray(metadata)) {
+            for (const workflow of metadata) {
+              await Action.findOneAndUpdate(
+                { repository: workflow.repository, workflowPath: workflow.workflowPath },
+                {
+                  name: workflow.name,
+                  description: workflow.description,
+                  repository: workflow.repository,
+                  type: 'workflow',
+                  category: workflow.category,
+                  author: workflow.author,
+                  stars: workflow.stars,
+                  lastUpdated: workflow.lastUpdated,
+                  inputs: workflow.inputs,
+                  outputs: workflow.outputs,
+                  workflowPath: workflow.workflowPath,
+                  triggers: workflow.triggers
+                },
+                { upsert: true, new: true }
+              );
+              console.log(`✅ Updated workflow ${workflow.name} in ${action.fullName}`);
+            }
+            updated += metadata.length;
+          } else {
+            // Handle single action
+            await Action.findOneAndUpdate(
+              { repository: metadata.repository },
+              {
+                name: metadata.name,
+                description: metadata.description,
+                repository: metadata.repository,
+                type: 'action',
+                category: metadata.category,
+                author: metadata.author,
+                stars: metadata.stars,
+                lastUpdated: metadata.lastUpdated,
+                inputs: metadata.inputs,
+                outputs: metadata.outputs,
+                runs: metadata.runs,
+                branding: metadata.branding
+              },
+              { upsert: true, new: true }
+            );
+            console.log(`✅ Updated action ${action.fullName}`);
+            updated++;
+          }
         } catch (error) {
           if (error.message.includes('API rate limit exceeded')) {
             console.log('⏳ Rate limit hit, waiting 60 seconds...');
@@ -103,27 +129,53 @@ async function updateActions() {
             try {
               const metadata = await fetchActionMetadata(action.owner, action.repo);
               if (metadata) {
-                await Action.findOneAndUpdate(
-                  { repository: metadata.repository },
-                  {
-                    name: metadata.name,
-                    description: metadata.description,
-                    repository: metadata.repository,
-                    category: metadata.category,
-                    author: metadata.author,
-                    stars: metadata.stars,
-                    lastUpdated: metadata.lastUpdated,
-                    inputs: metadata.inputs,
-                    outputs: metadata.outputs,
-                    runs: metadata.runs,
-                    branding: metadata.branding
-                  },
-                  { upsert: true, new: true }
-                );
-                console.log(`✅ Updated ${action.fullName} (after retry)`);
-                updated++;
+                if (Array.isArray(metadata)) {
+                  for (const workflow of metadata) {
+                    await Action.findOneAndUpdate(
+                      { repository: workflow.repository, workflowPath: workflow.workflowPath },
+                      {
+                        name: workflow.name,
+                        description: workflow.description,
+                        repository: workflow.repository,
+                        type: 'workflow',
+                        category: workflow.category,
+                        author: workflow.author,
+                        stars: workflow.stars,
+                        lastUpdated: workflow.lastUpdated,
+                        inputs: workflow.inputs,
+                        outputs: workflow.outputs,
+                        workflowPath: workflow.workflowPath,
+                        triggers: workflow.triggers
+                      },
+                      { upsert: true, new: true }
+                    );
+                  }
+                  console.log(`✅ Updated ${metadata.length} workflow(s) in ${action.fullName} (after retry)`);
+                  updated += metadata.length;
+                } else {
+                  await Action.findOneAndUpdate(
+                    { repository: metadata.repository },
+                    {
+                      name: metadata.name,
+                      description: metadata.description,
+                      repository: metadata.repository,
+                      type: 'action',
+                      category: metadata.category,
+                      author: metadata.author,
+                      stars: metadata.stars,
+                      lastUpdated: metadata.lastUpdated,
+                      inputs: metadata.inputs,
+                      outputs: metadata.outputs,
+                      runs: metadata.runs,
+                      branding: metadata.branding
+                    },
+                    { upsert: true, new: true }
+                  );
+                  console.log(`✅ Updated ${action.fullName} (after retry)`);
+                  updated++;
+                }
               } else {
-                console.log(`⚠️  Skipping ${action.fullName} - no action file found (after retry)`);
+                console.log(`⚠️  Skipping ${action.fullName} - no action or workflow found (after retry)`);
                 skipped++;
               }
             } catch (retryError) {

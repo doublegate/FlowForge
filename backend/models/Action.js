@@ -8,6 +8,12 @@ const ActionSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
   repository: { type: String, required: true, unique: true },
+  type: { 
+    type: String, 
+    enum: ['action', 'workflow'], 
+    required: true, 
+    default: 'action' 
+  },
   category: String,
   version: String,
   author: String,
@@ -27,6 +33,9 @@ const ActionSchema = new mongoose.Schema({
     pre: String,
     post: String
   },
+  // Workflow-specific fields
+  workflowPath: String, // Path to the workflow file
+  triggers: [String], // Array of trigger types (workflow_call, push, etc.)
   branding: {
     icon: String,
     color: String

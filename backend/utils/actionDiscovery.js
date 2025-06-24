@@ -19,6 +19,7 @@
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
 const { LRUCache } = require('lru-cache');
+const path = require('path');
 
 // Ensure environment variables are loaded
 if (!process.env.GITHUB_TOKEN) {
@@ -295,6 +296,197 @@ async function checkForWorkflows(owner, repo) {
 }
 
 /**
+ * Fetch reusable workflows from a repository
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @returns {Promise<Array>} Array of reusable workflow metadata
+ */
+async function fetchReusableWorkflows(owner, repo) {
+  const workflows = [];
+  
+  try {
+    // Get all workflow files
+    const { data: files } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: '.github/workflows'
+    });
+    
+    if (!Array.isArray(files)) {
+      return workflows;
+    }
+    
+    // Check each workflow file
+    for (const file of files) {
+      if (file.type === 'file' && 
+          (file.name.endsWith('.yml') || file.name.endsWith('.yaml'))) {
+        try {
+          const { data: content } = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: file.path,
+            mediaType: { format: 'raw' }
+          });
+          
+          const workflowData = parseWorkflowYaml(content, file.path);
+          
+          // Only include if it's a reusable workflow (has workflow_call trigger)
+          if (workflowData && workflowData.isReusable) {
+            workflows.push({
+              ...workflowData,
+              repository: `${owner}/${repo}`,
+              workflowPath: file.path,
+              type: 'workflow'
+            });
+            console.log(`✓ Found reusable workflow at ${file.path} in ${owner}/${repo}`);
+          }
+        } catch (error) {
+          console.debug(`Error parsing workflow ${file.path}: ${error.message}`);
+        }
+      }
+    }
+    
+    return workflows;
+  } catch (error) {
+    console.debug(`Error fetching workflows from ${owner}/${repo}: ${error.message}`);
+    return workflows;
+  }
+}
+
+/**
+ * Parse workflow YAML content
+ * @param {string} yamlContent - Raw YAML content
+ * @param {string} filePath - Path to the workflow file
+ * @returns {Object|null} Parsed workflow metadata
+ */
+function parseWorkflowYaml(yamlContent, filePath) {
+  try {
+    const parsed = yaml.load(yamlContent);
+    
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    
+    // Check if it's a reusable workflow
+    const hasWorkflowCall = parsed.on && 
+                           parsed.on.workflow_call !== undefined;
+    
+    if (!hasWorkflowCall) {
+      return null;
+    }
+    
+    // Extract workflow metadata
+    const metadata = {
+      name: parsed.name || path.basename(filePath, path.extname(filePath)),
+      description: parsed.name || 'Reusable workflow',
+      isReusable: true,
+      triggers: Object.keys(parsed.on || {}),
+      inputs: {},
+      outputs: {},
+      secrets: {}
+    };
+    
+    // Extract inputs from workflow_call
+    if (parsed.on.workflow_call && parsed.on.workflow_call.inputs) {
+      metadata.inputs = normalizeWorkflowInputs(parsed.on.workflow_call.inputs);
+    }
+    
+    // Extract outputs from workflow_call
+    if (parsed.on.workflow_call && parsed.on.workflow_call.outputs) {
+      metadata.outputs = normalizeWorkflowOutputs(parsed.on.workflow_call.outputs);
+    }
+    
+    // Extract secrets from workflow_call
+    if (parsed.on.workflow_call && parsed.on.workflow_call.secrets) {
+      metadata.secrets = normalizeWorkflowSecrets(parsed.on.workflow_call.secrets);
+    }
+    
+    return metadata;
+  } catch (error) {
+    console.error(`Error parsing workflow YAML: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Normalize workflow inputs to consistent format
+ * @param {Object} inputs - Raw inputs from workflow YAML
+ * @returns {Object} Normalized inputs
+ */
+function normalizeWorkflowInputs(inputs) {
+  const normalized = {};
+  
+  for (const [key, value] of Object.entries(inputs)) {
+    if (typeof value === 'string') {
+      normalized[key] = {
+        description: value,
+        required: false,
+        type: 'string'
+      };
+    } else if (typeof value === 'object' && value !== null) {
+      normalized[key] = {
+        description: value.description || '',
+        required: value.required === true,
+        default: value.default,
+        type: value.type || 'string'
+      };
+    }
+  }
+  
+  return normalized;
+}
+
+/**
+ * Normalize workflow outputs to consistent format
+ * @param {Object} outputs - Raw outputs from workflow YAML
+ * @returns {Object} Normalized outputs
+ */
+function normalizeWorkflowOutputs(outputs) {
+  const normalized = {};
+  
+  for (const [key, value] of Object.entries(outputs)) {
+    if (typeof value === 'string') {
+      normalized[key] = {
+        description: value,
+        value: ''
+      };
+    } else if (typeof value === 'object' && value !== null) {
+      normalized[key] = {
+        description: value.description || '',
+        value: value.value || ''
+      };
+    }
+  }
+  
+  return normalized;
+}
+
+/**
+ * Normalize workflow secrets to consistent format
+ * @param {Object} secrets - Raw secrets from workflow YAML
+ * @returns {Object} Normalized secrets
+ */
+function normalizeWorkflowSecrets(secrets) {
+  const normalized = {};
+  
+  for (const [key, value] of Object.entries(secrets)) {
+    if (typeof value === 'boolean') {
+      normalized[key] = {
+        required: value,
+        description: ''
+      };
+    } else if (typeof value === 'object' && value !== null) {
+      normalized[key] = {
+        required: value.required !== false,
+        description: value.description || ''
+      };
+    }
+  }
+  
+  return normalized;
+}
+
+/**
  * Fetch detailed metadata for a GitHub Action
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
@@ -322,11 +514,22 @@ async function fetchActionMetadata(owner, repo) {
     ]);
     
     if (!actionYml) {
-      // Check if this might be a composite action or has workflows
-      const hasWorkflows = await checkForWorkflows(owner, repo);
-      if (hasWorkflows) {
-        console.log(`ℹ️  ${owner}/${repo} appears to be a workflow repository, not an action`);
+      // Check if this repository has reusable workflows
+      const workflows = await fetchReusableWorkflows(owner, repo);
+      
+      if (workflows.length > 0) {
+        console.log(`ℹ️  ${owner}/${repo} contains ${workflows.length} reusable workflow(s)`);
+        // Return array of workflow metadata instead of single action
+        return workflows.map(workflow => ({
+          ...workflow,
+          repository: `${owner}/${repo}@${repoData.default_branch}`,
+          stars: repoData.stargazers_count,
+          lastUpdated: repoData.updated_at,
+          author: workflow.author || owner,
+          category: detectWorkflowCategory(workflow, repo, repoData.topics)
+        }));
       }
+      
       return null;
     }
     
@@ -817,12 +1020,47 @@ async function searchActions(criteria = {}) {
   return filtered;
 }
 
+/**
+ * Detect the most appropriate category for a workflow
+ * @param {Object} workflowMetadata - Parsed workflow metadata
+ * @param {string} repoName - Repository name
+ * @param {Array} topics - GitHub topics
+ * @returns {string} Detected category
+ */
+function detectWorkflowCategory(workflowMetadata, repoName, topics = []) {
+  // Workflows often have different categorization patterns
+  const workflowCategories = {
+    ci: ['ci', 'continuous-integration', 'build', 'test'],
+    cd: ['cd', 'deploy', 'release', 'publish'],
+    security: ['security', 'scan', 'vulnerability', 'audit'],
+    automation: ['automation', 'bot', 'auto'],
+    documentation: ['docs', 'documentation']
+  };
+  
+  const searchText = [
+    workflowMetadata.name || '',
+    workflowMetadata.description || '',
+    repoName,
+    ...topics
+  ].join(' ').toLowerCase();
+  
+  for (const [category, keywords] of Object.entries(workflowCategories)) {
+    if (keywords.some(keyword => searchText.includes(keyword))) {
+      return category;
+    }
+  }
+  
+  return 'workflow';
+}
+
 // Export all utilities
 module.exports = {
   fetchAwesomeActions,
   fetchActionMetadata,
+  fetchReusableWorkflows,
   searchActions,
   detectActionCategory,
+  detectWorkflowCategory,
   validateActionMetadata,
   detectCompatibility,
   CATEGORY_DEFINITIONS

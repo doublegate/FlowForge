@@ -69,7 +69,7 @@ async function updateActions() {
           const metadata = await fetchActionMetadata(action.owner, action.repo);
           
           if (!metadata) {
-            console.log(`⚠️  Skipping ${action.fullName} - no action.yml found`);
+            console.log(`⚠️  Skipping ${action.fullName} - no action file found`);
             skipped++;
             continue;
           }
@@ -123,7 +123,7 @@ async function updateActions() {
                 console.log(`✅ Updated ${action.fullName} (after retry)`);
                 updated++;
               } else {
-                console.log(`⚠️  Skipping ${action.fullName} - no action.yml found (after retry)`);
+                console.log(`⚠️  Skipping ${action.fullName} - no action file found (after retry)`);
                 skipped++;
               }
             } catch (retryError) {

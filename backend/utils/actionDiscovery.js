@@ -256,6 +256,45 @@ function isExcludedRepo(owner, repo) {
 }
 
 /**
+ * Check if a repository is a special case (not a traditional action)
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @returns {boolean} Whether this is a special case repo
+ */
+function isSpecialCaseRepo(owner, repo) {
+  const specialCases = [
+    { owner: 'actions', repo: 'virtual-environments' },
+    { owner: 'actions', repo: 'runner' },
+    { owner: 'actions', repo: 'starter-workflows' },
+    { owner: 'features', repo: 'actions' },
+    { owner: 'github', repo: 'super-linter' }, // Has action in .automation/
+    { owner: 'release-drafter', repo: 'release-drafter' } // Has action in subdirectory
+  ];
+  
+  return specialCases.some(sc => sc.owner === owner && sc.repo === repo);
+}
+
+/**
+ * Check if repository contains workflows instead of being an action
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @returns {Promise<boolean>} Whether workflows exist
+ */
+async function checkForWorkflows(owner, repo) {
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path: '.github/workflows'
+    });
+    
+    return Array.isArray(data) && data.length > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Fetch detailed metadata for a GitHub Action
  * @param {string} owner - Repository owner
  * @param {string} repo - Repository name
@@ -270,6 +309,12 @@ async function fetchActionMetadata(owner, repo) {
   }
 
   try {
+    // Handle special cases for known repositories that aren't traditional actions
+    if (isSpecialCaseRepo(owner, repo)) {
+      console.log(`ℹ️  Skipping ${owner}/${repo} - not a traditional action repository`);
+      return null;
+    }
+    
     // Fetch repository information
     const [repoData, actionYml] = await Promise.all([
       fetchRepositoryInfo(owner, repo),
@@ -277,6 +322,11 @@ async function fetchActionMetadata(owner, repo) {
     ]);
     
     if (!actionYml) {
+      // Check if this might be a composite action or has workflows
+      const hasWorkflows = await checkForWorkflows(owner, repo);
+      if (hasWorkflows) {
+        console.log(`ℹ️  ${owner}/${repo} appears to be a workflow repository, not an action`);
+      }
       return null;
     }
     
@@ -325,8 +375,17 @@ async function fetchRepositoryInfo(owner, repo) {
  * @returns {Promise<Object|null>} Parsed action metadata
  */
 async function fetchActionYaml(owner, repo) {
-  const possiblePaths = ['action.yml', 'action.yaml'];
+  // Common paths where action files might be located
+  const possiblePaths = [
+    'action.yml',
+    'action.yaml',
+    '.github/action.yml',
+    '.github/action.yaml',
+    'action/action.yml',
+    'action/action.yaml'
+  ];
   
+  // First, try common paths
   for (const path of possiblePaths) {
     try {
       const { data } = await octokit.repos.getContent({
@@ -336,17 +395,85 @@ async function fetchActionYaml(owner, repo) {
         mediaType: { format: 'raw' }
       });
       
+      console.log(`✓ Found action file at ${path} for ${owner}/${repo}`);
       return parseActionYaml(data);
     } catch (error) {
-      // Log specific error only if it's not a 404 (expected when file doesn't exist)
+      // Continue to next path if not found
       if (error.status !== 404) {
         console.debug(`Error fetching ${path} for ${owner}/${repo}: ${error.message}`);
       }
-      // Continue to next path
     }
   }
   
+  // If not found in common paths, search the repository structure
+  try {
+    console.log(`🔍 Searching for action files in ${owner}/${repo}...`);
+    const actionFile = await searchForActionFile(owner, repo);
+    
+    if (actionFile) {
+      const { data } = await octokit.repos.getContent({
+        owner,
+        repo,
+        path: actionFile.path,
+        mediaType: { format: 'raw' }
+      });
+      
+      console.log(`✓ Found action file at ${actionFile.path} for ${owner}/${repo}`);
+      return parseActionYaml(data);
+    }
+  } catch (error) {
+    console.debug(`Error searching for action files in ${owner}/${repo}: ${error.message}`);
+  }
+  
   return null;
+}
+
+/**
+ * Search for action files in the repository
+ * @param {string} owner - Repository owner
+ * @param {string} repo - Repository name
+ * @param {string} path - Path to search (default: root)
+ * @returns {Promise<Object|null>} File info if found
+ */
+async function searchForActionFile(owner, repo, path = '') {
+  try {
+    const { data } = await octokit.repos.getContent({
+      owner,
+      repo,
+      path
+    });
+    
+    // If data is not an array, it's a file, not a directory
+    if (!Array.isArray(data)) {
+      return null;
+    }
+    
+    // First, check for action files in current directory
+    for (const item of data) {
+      if (item.type === 'file' && 
+          (item.name === 'action.yml' || item.name === 'action.yaml')) {
+        return item;
+      }
+    }
+    
+    // Then, search in subdirectories (limit depth to avoid excessive API calls)
+    if (path.split('/').length < 3) {  // Max depth of 3
+      for (const item of data) {
+        if (item.type === 'dir' && !item.name.startsWith('.') && 
+            !['node_modules', 'vendor', 'dist', 'build', 'test', 'tests', 'docs'].includes(item.name)) {
+          const found = await searchForActionFile(owner, repo, item.path);
+          if (found) {
+            return found;
+          }
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    // Ignore errors during search
+    return null;
+  }
 }
 
 /**

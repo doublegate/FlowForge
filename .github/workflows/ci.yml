@@ -234,13 +234,17 @@ jobs:
           cd frontend
           npm audit --audit-level moderate
 
-      - name: 🛡️ Run CodeQL Analysis
-        uses: github/codeql-action/init@v2
+      - name: 🛡️ Initialize CodeQL
+        uses: github/codeql-action/init@v3
         with:
-          languages: javascript
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: 🔨 Autobuild
+        uses: github/codeql-action/autobuild@v3
 
       - name: 🛡️ Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
 
   # Job 5: Docker Build and Test
   docker-build:

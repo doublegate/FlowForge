@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - 2025-06-24
+
+### Added
+- 📦 **Flatpak Support**
+  - Complete Flatpak packaging for Linux desktop distribution
+  - Electron wrapper for native desktop application experience
+  - Embedded MongoDB instance for self-contained deployment
+  - Automated build scripts and tooling in `scripts/` directory
+  - Desktop integration with `.yml` and `.yaml` file associations
+  - Application menu entries and icon support
+  - Bundle creation for offline distribution
+
+- 🗂️ **Project Organization**
+  - Moved all Flatpak-related scripts to dedicated `scripts/` directory
+  - Created comprehensive Flatpak build documentation
+  - Added environment validation and setup scripts
+  - Improved project structure for better maintainability
+
+### Technical Improvements
+- Created modular build system with proper path handling
+- Implemented offline npm package source generation
+- Added development manifest for easier testing
+- Integrated with freedesktop runtime and Electron base app
+
 ## [0.2.0] - 2024-12-24
 
 ### Added in 0.2.0

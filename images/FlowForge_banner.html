@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowForge Banner 2 - Developer Banner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #0d1117;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .banner-container {
+            background: #161b22;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            max-width: 1200px;
+            width: 100%;
+            border: 1px solid #30363d;
+        }
+        
+        .banner {
+            width: 100%;
+            height: 400px;
+            position: relative;
+            background: #0d1117;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+            box-shadow: 0 0 60px rgba(88, 166, 255, 0.15);
+        }
+        
+        /* Code editor style header */
+        .header {
+            background: #161b22;
+            height: 40px;
+            border-bottom: 1px solid #30363d;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+        }
+        
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .control {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .control-close { background: #ff5f56; }
+        .control-minimize { background: #ffbd2e; }
+        .control-maximize { background: #27c93f; }
+        
+        .header-title {
+            color: #8b949e;
+            font-size: 14px;
+            flex: 1;
+            text-align: center;
+        }
+        
+        /* Main content area */
+        .content-area {
+            display: flex;
+            height: calc(100% - 40px);
+        }
+        
+        /* Left panel - YAML code */
+        .code-panel {
+            flex: 1;
+            background: #0d1117;
+            padding: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .code-line {
+            color: #8b949e;
+            line-height: 1.6;
+            font-size: 14px;
+            margin: 4px 0;
+            opacity: 0;
+            animation: type-in 0.1s ease-out forwards;
+        }
+        
+        .code-line:nth-child(1) { animation-delay: 0.1s; }
+        .code-line:nth-child(2) { animation-delay: 0.2s; }
+        .code-line:nth-child(3) { animation-delay: 0.3s; }
+        .code-line:nth-child(4) { animation-delay: 0.4s; }
+        .code-line:nth-child(5) { animation-delay: 0.5s; }
+        .code-line:nth-child(6) { animation-delay: 0.6s; }
+        .code-line:nth-child(7) { animation-delay: 0.7s; }
+        .code-line:nth-child(8) { animation-delay: 0.8s; }
+        .code-line:nth-child(9) { animation-delay: 0.9s; }
+        .code-line:nth-child(10) { animation-delay: 1.0s; }
+        
+        @keyframes type-in {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .value { color: #79c0ff; }
+        .comment { color: #6e7681; }
+        
+        /* Center divider */
+        .divider {
+            width: 1px;
+            background: #30363d;
+            position: relative;
+        }
+        
+        .transform-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 30px rgba(88, 166, 255, 0.3);
+            animation: rotate 10s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        
+        .transform-icon svg {
+            width: 30px;
+            height: 30px;
+            fill: #58a6ff;
+        }
+        
+        /* Right panel - Visual flow */
+        .visual-panel {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: radial-gradient(circle at center, rgba(88, 166, 255, 0.05) 0%, transparent 70%);
+        }
+        
+        .flow-diagram {
+            position: relative;
+            width: 300px;
+            height: 250px;
+        }
+        
+        .flow-node {
+            position: absolute;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: #58a6ff;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.3);
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: node-appear 0.5s ease-out forwards;
+        }
+        
+        .flow-node:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+            background: #1f2937;
+        }
+        
+        .flow-node-1 { 
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%);
+            animation-delay: 1.2s;
+        }
+        .flow-node-2 { 
+            top: 80px; 
+            left: 0;
+            animation-delay: 1.4s;
+        }
+        .flow-node-3 { 
+            top: 80px; 
+            right: 0;
+            animation-delay: 1.6s;
+        }
+        .flow-node-4 { 
+            bottom: 0; 
+            left: 50%; 
+            transform: translateX(-50%);
+            animation-delay: 1.8s;
+        }
+        
+        @keyframes node-appear {
+            from {
+                opacity: 0;
+                transform: translateY(20px) translateX(var(--translate-x, 0));
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) translateX(var(--translate-x, 0));
+            }
+        }
+        
+        /* Flow connections */
+        .flow-line {
+            position: absolute;
+            background: #58a6ff;
+            opacity: 0.3;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-line-1 {
+            width: 2px;
+            height: 60px;
+            top: 42px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .flow-line-2 {
+            width: 2px;
+            height: 50px;
+            top: 130px;
+            left: 60px;
+            transform: rotate(45deg);
+            transform-origin: top center;
+        }
+        
+        .flow-line-3 {
+            width: 2px;
+            height: 50px;
+            top: 130px;
+            right: 60px;
+            transform: rotate(-45deg);
+            transform-origin: top center;
+        }
+        
+        /* Energy pulses */
+        .pulse {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #58a6ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #58a6ff;
+            animation: pulse-flow 3s ease-in-out infinite;
+        }
+        
+        .pulse-1 { animation-delay: 0s; }
+        .pulse-2 { animation-delay: 1s; }
+        .pulse-3 { animation-delay: 2s; }
+        
+        @keyframes pulse-flow {
+            0% {
+                opacity: 0;
+                transform: scale(0);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0);
+            }
+        }
+        
+        /* Title overlay */
+        .title-overlay {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .main-title {
+            font-size: 48px;
+            font-weight: 900;
+            color: #58a6ff;
+            margin: 0;
+            text-shadow: 0 0 30px rgba(88, 166, 255, 0.5);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #8b949e;
+            margin-top: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        /* Terminal cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 20px;
+            background: #58a6ff;
+            animation: blink 1s ease-in-out infinite;
+            vertical-align: text-bottom;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="banner-container">
+        <div class="banner">
+            <div class="header">
+                <div class="window-controls">
+                    <div class="control control-close"></div>
+                    <div class="control control-minimize"></div>
+                    <div class="control control-maximize"></div>
+                </div>
+                <div class="header-title">flowforge.yml — Visual GitHub Actions Builder</div>
+            </div>
+            
+            <div class="content-area">
+                <!-- YAML Code Panel -->
+                <div class="code-panel">
+                    <div class="code-line"><span class="keyword">name</span>: <span class="string">'CI/CD Pipeline'</span></div>
+                    <div class="code-line"></div>
+                    <div class="code-line"><span class="keyword">on</span>:</div>
+                    <div class="code-line">  <span class="keyword">push</span>:</div>
+                    <div class="code-line">    <span class="keyword">branches</span>: [<span class="string">'main'</span>]</div>
+                    <div class="code-line"></div>
+                    <div class="code-line"><span class="keyword">jobs</span>:</div>
+                    <div class="code-line">  <span class="keyword">build</span>:</div>
+                    <div class="code-line">    <span class="keyword">runs-on</span>: <span class="value">ubuntu-latest</span></div>
+                    <div class="code-line">    <span class="comment"># Generated by FlowForge AI</span><span class="cursor"></span></div>
+                </div>
+                
+                <!-- Divider with transform icon -->
+                <div class="divider">
+                    <div class="transform-icon">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.5,16.5L12,12L7.5,16.5L6,15L12,9L18,15L16.5,16.5Z"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Visual Flow Panel -->
+                <div class="visual-panel">
+                    <div class="flow-diagram">
+                        <div class="flow-node flow-node-1" style="--translate-x: -50%">Trigger</div>
+                        <div class="flow-node flow-node-2">Build</div>
+                        <div class="flow-node flow-node-3">Test</div>
+                        <div class="flow-node flow-node-4" style="--translate-x: -50%">Deploy</div>
+                        
+                        <div class="flow-line flow-line-1">
+                            <div class="pulse pulse-1"></div>
+                        </div>
+                        <div class="flow-line flow-line-2">
+                            <div class="pulse pulse-2"></div>
+                        </div>
+                        <div class="flow-line flow-line-3">
+                            <div class="pulse pulse-3"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Title Overlay -->
+                <div class="title-overlay">
+                    <h1 class="main-title">FlowForge</h1>
+                    <p class="subtitle">Transform YAML to Visual Workflows • AI-Powered CI/CD</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Add hover effects to flow nodes
+        const flowNodes = document.querySelectorAll('.flow-node');
+        const flowLines = document.querySelectorAll('.flow-line');
+        
+        flowNodes.forEach((node, index) => {
+            node.addEventListener('mouseover', () => {
+                if (index < flowLines.length) {
+                    flowLines[index].style.opacity = '0.8';
+                    flowLines[index].style.boxShadow = '0 0 10px #58a6ff';
+                }
+            });
+            
+            node.addEventListener('mouseout', () => {
+                if (index < flowLines.length) {
+                    flowLines[index].style.opacity = '0.3';
+                    flowLines[index].style.boxShadow = 'none';
+                }
+            });
+        });
+        
+        // Simulate typing effect continuation
+        setInterval(() => {
+            const cursor = document.querySelector('.cursor');
+            if (cursor) {
+                cursor.style.animation = 'none';
+                setTimeout(() => {
+                    cursor.style.animation = 'blink 1s ease-in-out infinite';
+                }, 50);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

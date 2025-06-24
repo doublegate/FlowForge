@@ -22,6 +22,8 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 - 💾 **Workflow Persistence** - Save and load workflows from MongoDB
 - 🏷️ **Advanced Categorization** - 14 intelligent categories for easy action discovery
 - 🔄 **Full CRUD Operations** - Create, read, update, and delete workflows
+- 📦 **Desktop Distribution** - Flatpak support for Linux desktop deployment
+- 🖥️ **Native Desktop App** - Electron wrapper for desktop experience
 
 ## 🚀 Quick Start
 
@@ -38,8 +40,8 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/flowforge.git
-   cd flowforge
+   git clone https://github.com/doublegate/FlowForge.git
+   cd FlowForge
    ```
 
 2. **Set up environment variables**
@@ -74,11 +76,22 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
    - Frontend: <http://localhost:5173>
    - API: <http://localhost:3001>
 
+### Flatpak Build
+
+FlowForge can also be built as a Flatpak for easy distribution:
+
+```bash
+./scripts/build-flatpak.sh --install --run
+```
+
+See the [Flatpak Build Guide](docs/FLATPAK-BUILD.md) for detailed instructions.
+
 ## 📖 Documentation
 
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [API Documentation](docs/API.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
+- [Flatpak Build Guide](docs/FLATPAK-BUILD.md)
 
 ## 🛠️ Technology Stack
 
@@ -135,6 +148,11 @@ FlowForge is currently in **beta**. Core features including AI integration are c
   - [x] Workflow persistence to MongoDB
   - [x] Enhanced GitHub API integration with authentication
   - [x] Advanced action metadata parsing
+- [x] Desktop Distribution: Flatpak support for Linux ✅ COMPLETED
+  - [x] Complete Flatpak packaging
+  - [x] Electron wrapper for native experience
+  - [x] Embedded MongoDB for self-contained deployment
+  - [x] Automated build scripts
 - [ ] Phase 3: Enterprise features and marketplace (next)
 - [ ] Phase 4: Multi-platform support
 
@@ -142,11 +160,11 @@ FlowForge is currently in **beta**. Core features including AI integration are c
 
 - 📧 Email: <support@flowforge.dev>
 - 💬 Discord: [Join our community](https://discord.gg/flowforge)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/flowforge/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/doublegate/FlowForge/issues)
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=yourusername/flowforge&type=Date)](https://star-history.com/#yourusername/flowforge&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=doublegate/FlowForge&type=Date)](https://star-history.com/#doublegate/FlowForge&Date)
 
 ---
 

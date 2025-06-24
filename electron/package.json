@@ -1,0 +1,12 @@
+{
+  "name": "flowforge-electron",
+  "version": "1.0.0",
+  "description": "Electron wrapper for FlowForge",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^28.1.0"
+  }
+}

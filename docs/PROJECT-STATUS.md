@@ -1,8 +1,8 @@
 # FlowForge Project Status
 
-**Last Updated**: 2024-12-24  
+**Last Updated**: 2025-06-24  
 **Current Version**: 0.2.0  
-**Status**: Beta - Core Features Complete
+**Status**: Beta - Core Features Complete, Flatpak Support Added
 
 ## 🎉 Completed Milestones
 
@@ -43,6 +43,20 @@
 - Request validation and sanitization
 - Improved error responses
 - API documentation
+
+### Additional Achievements (2025-06-24)
+✅ **Flatpak Support**
+- Complete Flatpak packaging for desktop distribution
+- Electron wrapper for native desktop experience
+- Embedded MongoDB for self-contained deployment
+- Automated build scripts in `scripts/` directory
+- Desktop integration with file associations
+
+✅ **Project Organization**
+- All Flatpak scripts moved to `scripts/` directory
+- Comprehensive build documentation
+- Environment validation tools
+- Bundle creation for distribution
 
 ## 📊 Technical Achievements
 
@@ -130,8 +144,9 @@
 ### Development Progress
 - Phase 1: 100% Complete
 - Phase 2: 100% Complete
+- Flatpak Support: 100% Complete
 - Phase 3: 0% (Planning stage)
-- Overall: ~50% of full roadmap
+- Overall: ~55% of full roadmap
 
 ## 🐛 Known Issues
 
@@ -151,9 +166,10 @@
 ## 🔗 Resources
 
 ### Documentation
-- [Architecture Guide](docs/ARCHITECTURE.md)
-- [API Documentation](docs/API.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Architecture Guide](ARCHITECTURE.md)
+- [API Documentation](API.md)
+- [Deployment Guide](DEPLOYMENT.md)
+- [Flatpak Build Guide](FLATPAK-BUILD.md)
 
 ### Development
 - Backend: `http://localhost:3001`

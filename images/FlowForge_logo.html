@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowForge Logo 2 - Circuit Flow</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: #1a1a1a;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .logo-container {
+            background: #0d1117;
+            padding: 60px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            display: inline-block;
+            border: 1px solid #30363d;
+        }
+        
+        .logo {
+            width: 300px;
+            height: 300px;
+            position: relative;
+            background: #0d1117;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 
+                0 0 80px rgba(88, 166, 255, 0.4),
+                inset 0 0 60px rgba(88, 166, 255, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid #58a6ff;
+        }
+        
+        .logo:hover {
+            transform: scale(1.05);
+            box-shadow: 
+                0 0 100px rgba(88, 166, 255, 0.6),
+                inset 0 0 80px rgba(88, 166, 255, 0.2);
+        }
+        
+        /* Circuit board background */
+        .circuit-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            background-image: 
+                linear-gradient(0deg, #58a6ff 1px, transparent 1px),
+                linear-gradient(90deg, #58a6ff 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        
+        /* Flow diagram */
+        .flow-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+        }
+        
+        /* Central forge icon */
+        .forge-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #58a6ff, #1f6feb);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 40px rgba(88, 166, 255, 0.8);
+            z-index: 10;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .forge-core::before {
+            content: 'F';
+            font-size: 40px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Orbital nodes */
+        .orbit {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            border: 2px dashed rgba(88, 166, 255, 0.3);
+            border-radius: 50%;
+            animation: rotate 20s linear infinite;
+        }
+        
+        .orbit-1 {
+            width: 140px;
+            height: 140px;
+            margin-top: -70px;
+            margin-left: -70px;
+        }
+        
+        .orbit-2 {
+            width: 180px;
+            height: 180px;
+            margin-top: -90px;
+            margin-left: -90px;
+            animation-duration: 30s;
+            animation-direction: reverse;
+        }
+        
+        .orbit-node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #161b22;
+            border: 2px solid #58a6ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 20px rgba(88, 166, 255, 0.6);
+        }
+        
+        .orbit-1 .orbit-node {
+            top: -20px;
+            left: 50%;
+            margin-left: -20px;
+        }
+        
+        .orbit-2 .orbit-node-1 {
+            top: -20px;
+            left: 50%;
+            margin-left: -20px;
+        }
+        
+        .orbit-2 .orbit-node-2 {
+            bottom: -20px;
+            left: 50%;
+            margin-left: -20px;
+        }
+        
+        .orbit-2 .orbit-node-3 {
+            top: 50%;
+            right: -20px;
+            margin-top: -20px;
+        }
+        
+        /* Node icons */
+        .icon {
+            width: 20px;
+            height: 20px;
+            fill: #58a6ff;
+        }
+        
+        /* Energy lines */
+        .energy-line {
+            position: absolute;
+            background: linear-gradient(to right, transparent, #58a6ff, transparent);
+            height: 2px;
+            transform-origin: left center;
+            animation: energy-flow 3s ease-in-out infinite;
+        }
+        
+        .energy-line-1 {
+            width: 60px;
+            top: 50%;
+            left: 100px;
+            transform: rotate(45deg);
+        }
+        
+        .energy-line-2 {
+            width: 60px;
+            top: 50%;
+            right: 100px;
+            transform: rotate(-45deg);
+            animation-delay: 1s;
+        }
+        
+        .energy-line-3 {
+            width: 60px;
+            bottom: 70px;
+            left: 50%;
+            transform: translateX(-50%) rotate(90deg);
+            animation-delay: 2s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { 
+                transform: translate(-50%, -50%) scale(1);
+                box-shadow: 0 0 40px rgba(88, 166, 255, 0.8);
+            }
+            50% { 
+                transform: translate(-50%, -50%) scale(1.1);
+                box-shadow: 0 0 60px rgba(88, 166, 255, 1);
+            }
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes energy-flow {
+            0%, 100% { opacity: 0; width: 0; }
+            50% { opacity: 1; width: 60px; }
+        }
+        
+        /* Glowing particles */
+        .glow-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #58a6ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #58a6ff;
+            animation: glow-move 10s infinite ease-in-out;
+        }
+        
+        .glow-particle-1 { top: 20%; left: 15%; animation-delay: 0s; }
+        .glow-particle-2 { top: 75%; left: 25%; animation-delay: 2.5s; }
+        .glow-particle-3 { top: 30%; right: 20%; animation-delay: 5s; }
+        .glow-particle-4 { bottom: 25%; right: 25%; animation-delay: 7.5s; }
+        
+        @keyframes glow-move {
+            0%, 100% { 
+                transform: translate(0, 0) scale(0.5);
+                opacity: 0.3;
+            }
+            25% { 
+                transform: translate(20px, -20px) scale(1);
+                opacity: 1;
+            }
+            50% { 
+                transform: translate(-20px, 20px) scale(0.8);
+                opacity: 0.8;
+            }
+            75% { 
+                transform: translate(10px, 10px) scale(1.2);
+                opacity: 0.6;
+            }
+        }
+        
+        .title {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 36px;
+            font-weight: 700;
+            color: #58a6ff;
+            text-shadow: 0 0 20px rgba(88, 166, 255, 0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 18px;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <div class="logo">
+            <div class="circuit-bg"></div>
+            
+            <div class="flow-container">
+                <!-- Central forge -->
+                <div class="forge-core"></div>
+                
+                <!-- Orbiting elements -->
+                <div class="orbit orbit-1">
+                    <div class="orbit-node">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <div class="orbit orbit-2">
+                    <div class="orbit-node orbit-node-1">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M9,2V9H2V2H9M16,2V9H9V2H16M23,2V9H16V2H23M9,9V16H2V9H9M16,9V16H9V9H16M23,9V16H16V9H23M9,16V23H2V16H9M16,16V23H9V16H16M23,16V23H16V16H23Z"/>
+                        </svg>
+                    </div>
+                    <div class="orbit-node orbit-node-2">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z"/>
+                        </svg>
+                    </div>
+                    <div class="orbit-node orbit-node-3">
+                        <svg class="icon" viewBox="0 0 24 24">
+                            <path d="M5,3L4.35,6.34C3.53,6.91 3,7.9 3,9V19A2,2 0 0,0 5,21H11C11.91,21 12.68,20.38 12.91,19.54L17.61,21.71L18.16,19.78L13.22,17.5C13.08,16.91 12.68,16.43 12.15,16.17L14.43,5.34L12.43,4.84L10.23,15.41L10,15.37V6.9C10.32,6.64 10.56,6.28 10.67,5.87L11.4,3L5,3M5.85,5H9.15L8.88,6.02C8.57,6.17 8.21,6.24 7.83,6.24C7.46,6.24 7.1,6.16 6.78,6.02L6.84,5.74L5.85,5M6,9.5C6,9.78 6.22,10 6.5,10S7,9.78 7,9.5 6.78,9 6.5,9 6,9.22 6,9.5Z"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Energy lines -->
+                <div class="energy-line energy-line-1"></div>
+                <div class="energy-line energy-line-2"></div>
+                <div class="energy-line energy-line-3"></div>
+            </div>
+            
+            <!-- Glowing particles -->
+            <div class="glow-particle glow-particle-1"></div>
+            <div class="glow-particle glow-particle-2"></div>
+            <div class="glow-particle glow-particle-3"></div>
+            <div class="glow-particle glow-particle-4"></div>
+        </div>
+        <div class="title">FlowForge</div>
+        <div class="subtitle">AI-Powered Workflow Automation</div>
+    </div>
+    
+    <script>
+        // Add hover interaction
+        const logo = document.querySelector('.logo');
+        const forgeCore = document.querySelector('.forge-core');
+        
+        logo.addEventListener('mouseover', () => {
+            forgeCore.style.animation = 'pulse 0.5s ease-in-out infinite';
+        });
+        
+        logo.addEventListener('mouseout', () => {
+            forgeCore.style.animation = 'pulse 2s ease-in-out infinite';
+        });
+    </script>
+</body>
+</html>

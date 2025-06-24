@@ -1,0 +1,95 @@
+# Development version of FlowForge Flatpak
+# This version includes development tools and doesn't require API keys
+
+app-id: io.github.flowforge.FlowForge.Devel
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: flowforge-launcher
+
+finish-args:
+  - --share=network
+  - --filesystem=home
+  - --device=dri
+  - --socket=pulseaudio
+  - --socket=x11
+  - --share=ipc
+  - --socket=wayland
+  - --env=NODE_ENV=development
+  - --env=FLATPAK_DEVEL=1
+
+modules:
+  # Include a mock MongoDB for development
+  - name: mongomock
+    buildsystem: simple
+    build-commands:
+      - |
+        cat > mongomock.js << 'EOJS'
+        // Simple in-memory MongoDB mock for development
+        const express = require('express');
+        const app = express();
+        const port = 27017;
+        
+        app.use(express.json());
+        
+        const db = {
+          actions: [],
+          templates: []
+        };
+        
+        app.post('/flowforge/:collection/insert', (req, res) => {
+          db[req.params.collection].push(req.body);
+          res.json({ ok: 1 });
+        });
+        
+        app.get('/flowforge/:collection/find', (req, res) => {
+          res.json({ docs: db[req.params.collection] });
+        });
+        
+        app.listen(port, () => {
+          console.log(`MongoDB mock listening on port ${port}`);
+        });
+        EOJS
+      - install -Dm755 mongomock.js /app/bin/mongomock.js
+
+  # Simplified launcher for development
+  - name: flowforge-launcher-devel
+    buildsystem: simple
+    build-commands:
+      - |
+        cat > flowforge-launcher << 'EOSH'
+        #!/bin/bash
+        echo "FlowForge Development Mode"
+        echo "========================="
+        echo ""
+        echo "This is a development version with:"
+        echo "- Mock MongoDB"
+        echo "- Mock API responses"
+        echo "- No API key requirements"
+        echo ""
+        echo "Starting mock services..."
+        
+        # Start mock MongoDB
+        node /app/bin/mongomock.js &
+        MONGO_PID=$!
+        
+        # Set development environment
+        export NODE_ENV=development
+        export MOCK_MODE=true
+        export MONGODB_URI=mongodb://localhost:27017/flowforge
+        
+        # Wait for services
+        sleep 2
+        
+        # Start the application
+        echo "Starting FlowForge..."
+        cd /app
+        # Add your application start command here
+        
+        # Cleanup on exit
+        trap "kill $MONGO_PID" EXIT
+        
+        # Keep running
+        wait
+        EOSH
+      - install -Dm755 flowforge-launcher /app/bin/flowforge-launcher

@@ -242,25 +242,15 @@ jobs:
 
       - name: 🔨 Build for CodeQL Analysis
         run: |
-          echo "📦 Installing dependencies for CodeQL analysis..."
+          echo "📦 Preparing for CodeQL analysis..."
           
-          # Install backend dependencies
-          echo "Installing backend dependencies..."
-          cd backend
-          npm ci --prefer-offline --no-audit || npm install
-          cd ..
-          
-          # Install frontend dependencies
-          echo "Installing frontend dependencies..."
+          # Dependencies are already installed, just build
+          echo "Building frontend for TypeScript analysis..."
           cd frontend
-          npm ci --prefer-offline --no-audit || npm install
-          
-          # Build frontend (required for TypeScript analysis)
-          echo "Building frontend..."
-          npm run build || echo "Frontend build completed with warnings"
+          npm run build || true
           cd ..
           
-          echo "✅ Dependencies installed for CodeQL analysis"
+          echo "✅ Build complete for CodeQL analysis"
 
       - name: 🛡️ Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

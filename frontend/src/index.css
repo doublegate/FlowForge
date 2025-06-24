@@ -20,6 +20,19 @@
     color: #1a1a1a;
   }
   
+  /* Ensure minimum contrast for gray text colors */
+  .text-gray-400 {
+    color: #6b7280 !important; /* Upgrade to gray-500 */
+  }
+  
+  .text-gray-500 {
+    color: #4b5563 !important; /* Upgrade to gray-600 */
+  }
+  
+  .text-gray-600 {
+    color: #374151 !important; /* Upgrade to gray-700 */
+  }
+  
   /* Screen reader only class */
   .sr-only {
     position: absolute;

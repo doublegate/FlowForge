@@ -29,7 +29,7 @@ const FlowForge = () => {
 
   // Handle AI workflow generation
   const handleAIWorkflowGenerated = useCallback((aiResponse: WorkflowGenerationResponse) => {
-    console.log('AI workflow generated:', aiResponse);
+    // Successfully generated AI workflow
     // The Canvas component will handle the workflow loading
   }, []);
 

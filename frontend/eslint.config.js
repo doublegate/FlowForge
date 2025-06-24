@@ -21,6 +21,7 @@ export default [
         process: 'readonly',
         window: 'readonly',
         document: 'readonly',
+        navigator: 'readonly',
         fetch: 'readonly',
         alert: 'readonly',
         confirm: 'readonly',
@@ -32,7 +33,24 @@ export default [
         URL: 'readonly',
         URLSearchParams: 'readonly',
         FileReader: 'readonly',
-        Blob: 'readonly'
+        Blob: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLElement: 'readonly',
+        Element: 'readonly',
+        Node: 'readonly',
+        NodeList: 'readonly',
+        Event: 'readonly',
+        MouseEvent: 'readonly',
+        KeyboardEvent: 'readonly',
+        DragEvent: 'readonly',
+        File: 'readonly',
+        FormData: 'readonly',
+        Headers: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly'
       }
     },
     plugins: {

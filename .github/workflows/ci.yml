@@ -20,6 +20,13 @@ env:
   NODE_VERSION: '18.x'
   CACHE_VERSION: 'v1'
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  packages: write
+  pull-requests: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -85,25 +92,10 @@ jobs:
           cd frontend
           npm ci --prefer-offline --no-audit
 
-      - name: 📤 Upload Backend Dependencies
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-node-modules
-          path: backend/node_modules
-          retention-days: 1
-
-      - name: 📤 Upload Frontend Dependencies
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-node-modules
-          path: frontend/node_modules
-          retention-days: 1
-
   # Job 2: Backend Testing and Quality Checks
   backend-test:
     name: 🧪 Backend Tests & Quality
     runs-on: ubuntu-latest
-    needs: setup
     services:
       mongodb:
         image: mongo:7.0
@@ -126,12 +118,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-      - name: 📥 Download Backend Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-node-modules
-          path: backend/node_modules
+      - name: 📦 Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci --prefer-offline --no-audit
 
       - name: 🔍 Run ESLint
         run: |
@@ -159,7 +152,6 @@ jobs:
   frontend-test:
     name: 🧪 Frontend Tests & Quality
     runs-on: ubuntu-latest
-    needs: setup
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -168,12 +160,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: 📥 Download Frontend Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-node-modules
-          path: frontend/node_modules
+      - name: 📦 Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit
 
       - name: 🔍 Run ESLint
         run: |
@@ -188,7 +181,7 @@ jobs:
       - name: 🧪 Run Frontend Tests
         run: |
           cd frontend
-          npm test -- --coverage
+          npm test -- --run --coverage
 
       - name: 📊 Upload Frontend Coverage
         uses: codecov/codecov-action@v3
@@ -208,7 +201,6 @@ jobs:
   security:
     name: 🔒 Security Scanning
     runs-on: ubuntu-latest
-    needs: setup
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -217,23 +209,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
 
-      - name: 📥 Download Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-node-modules
-          path: backend/node_modules
+      - name: 📦 Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci --prefer-offline --no-audit
 
       - name: 🔍 Run Security Audit (Backend)
         run: |
           cd backend
           npm audit --audit-level moderate
 
-      - name: 📥 Download Frontend Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-node-modules
-          path: frontend/node_modules
+      - name: 📦 Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit
 
       - name: 🔍 Run Security Audit (Frontend)
         run: |
@@ -252,7 +246,7 @@ jobs:
   docker-build:
     name: 🐳 Docker Build & Test
     runs-on: ubuntu-latest
-    needs: [setup, backend-test, frontend-test]
+    needs: [backend-test, frontend-test]
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
@@ -308,7 +302,7 @@ jobs:
   integration-test:
     name: 🔗 Integration Tests
     runs-on: ubuntu-latest
-    needs: [setup, backend-test, frontend-test]
+    needs: [backend-test, frontend-test]
     services:
       mongodb:
         image: mongo:7.0
@@ -331,18 +325,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
 
-      - name: 📥 Download Backend Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-node-modules
-          path: backend/node_modules
-
-      - name: 📥 Download Frontend Dependencies
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-node-modules
-          path: frontend/node_modules
+      - name: 📦 Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci --prefer-offline --no-audit
 
       - name: 🌱 Seed Test Database
         env:

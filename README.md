@@ -201,5 +201,7 @@ FlowForge is currently in **beta** with **Phase 1 & 2 FULLY COMPLETE**. All core
   <img src="images/flowforge-banner.png" alt="FlowForge Banner" width="800">
 </p>
 
+![Alt](https://repobeats.axiom.co/api/embed/97a3ce43d9f25e97e415cd5561e7caff44e5c397.svg "Repobeats analytics image")
+
 <p align="center">Made with ❤️ by the FlowForge Team</p>
 <!-- markdownlint-enable MD033 -->

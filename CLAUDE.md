@@ -98,12 +98,19 @@ docker-compose up -d
 Required environment variables (create `.env` from `.env.example`):
 
 ```bash
-MONGODB_URI=mongodb://localhost:27017/flowforge
+MONGODB_URI=mongodb://admin:flowforge123@localhost:27017/flowforge?authSource=admin
 GITHUB_TOKEN=your_github_personal_access_token  # For API access
 OPENAI_API_KEY=your_openai_api_key             # For AI features
-PORT=3002                                       # Backend port
+PORT=3002                                       # Backend port (standardized from 3001)
 FRONTEND_URL=http://localhost:5173              # For CORS
+SESSION_SECRET=your_session_secret              # For future auth implementation
 ```
+
+**Important Notes**:
+- MongoDB requires authentication (admin:flowforge123)
+- Backend port is 3002 (changed from 3001 in v0.3.1)
+- GitHub token required for action updates (avoids rate limiting)
+- OpenAI API key required for AI workflow generation
 
 ### Important Patterns
 
@@ -129,8 +136,53 @@ The project includes Docker configuration for containerized development:
 - Frontend served via Nginx in production mode
 - Volumes mounted for development hot-reload
 
+### CI/CD Pipeline
+
+The project includes comprehensive GitHub Actions workflows:
+
+1. **Main CI/CD Pipeline** (`.github/workflows/ci.yml`):
+   - Multi-job pipeline with advanced caching optimization
+   - Parallel testing for frontend and backend
+   - Security scanning with npm audit and CodeQL
+   - Docker build validation with layer caching
+   - Integration testing with MongoDB service containers
+   - Performance testing with Lighthouse CI
+   - Automated releases on main branch
+
+2. **Dependency Management** (`.github/workflows/dependency-update.yml`):
+   - Weekly automated dependency updates
+   - Security vulnerability patching
+   - Pull request creation with test validation
+
+3. **Release Workflow** (`.github/workflows/release.yml`):
+   - Semantic version validation
+   - Docker image publishing to GitHub Container Registry
+   - Automated release notes generation
+
+4. **Maintenance Tasks** (`.github/workflows/maintenance.yml`):
+   - Weekly actions database updates
+   - Security audits and cache cleanup
+
+### Known Issues & Solutions
+
+1. **Backend Startup Sequence** (Fixed in v0.3.1):
+   - Issue: EADDRINUSE port conflicts from zombie processes
+   - Solution: MongoDB connection verified before HTTP server binding
+   - Location: `backend/index.js` - startServer() function
+
+2. **GitHub API Rate Limiting**:
+   - Issue: Rate limit exceeded errors during action updates
+   - Solution: Reduced batch size to 5, sequential processing, 60s retry waits
+   - Location: `backend/scripts/updateActions.js`
+
+3. **Environment Loading in Scripts**:
+   - Issue: Scripts couldn't find .env file
+   - Solution: Use `path.join(__dirname, '../../.env')` for correct path
+   - Location: `backend/scripts/updateActions.js`
+
 ### Future Considerations
 
 - Authentication system is prepared but not implemented (session secret in config)
 - Zustand is installed for future global state management needs
 - Component structure supports easy addition of new node types and actions
+- Phase 3 enterprise features planned (see to-dos/BACKLOG.md)

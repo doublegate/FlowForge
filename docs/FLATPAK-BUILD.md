@@ -7,6 +7,7 @@ This guide explains how to build FlowForge as a Flatpak package for easy distrib
 ## Prerequisites
 
 1. **Install Flatpak and Flatpak Builder**:
+
    ```bash
    # Ubuntu/Debian
    sudo apt install flatpak flatpak-builder
@@ -19,11 +20,13 @@ This guide explains how to build FlowForge as a Flatpak package for easy distrib
    ```
 
 2. **Add Flathub repository**:
+
    ```bash
    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
    ```
 
 3. **Install required tools**:
+
    ```bash
    # Node.js and npm for generating sources
    sudo apt install nodejs npm  # or equivalent for your distro
@@ -45,6 +48,7 @@ FlowForge now includes a unified build system. The easiest way to build and run 
 ```
 
 **Unified Build System Features:**
+
 - Single entry point with `build-flowforge.sh`
 - Automatic generation of distributable packages
 - All build scripts consolidated in `scripts/` directory
@@ -52,6 +56,7 @@ FlowForge now includes a unified build system. The easiest way to build and run 
 - Support for both development and production builds
 
 The build scripts will:
+
 - Install required Flatpak runtimes
 - Generate offline sources for npm packages
 - Build the Flatpak
@@ -120,10 +125,12 @@ FlowForge includes automated bundle creation as part of the unified build system
 ```
 
 This creates both:
+
 - `FlowForge.flatpak` - Flatpak bundle for installation
 - `flowforge-0.2.0-linux-x64.tar.gz` - Complete distributable package
 
 Install the Flatpak bundle with:
+
 ```bash
 flatpak install --user FlowForge.flatpak
 ```
@@ -137,11 +144,13 @@ On first run, FlowForge will need API keys configured. Run the setup script:
 ```
 
 Or manually create the config at:
-```
+
+```bash
 ~/.var/app/io.github.flowforge.FlowForge/config/flowforge/.env
 ```
 
 With content:
+
 ```env
 GITHUB_TOKEN=your_github_token_here
 OPENAI_API_KEY=your_openai_api_key_here
@@ -172,11 +181,13 @@ To validate your build environment:
 ### Debug Mode
 
 Run with debug output:
+
 ```bash
 flatpak run --env=FLOWFORGE_DEBUG=1 io.github.flowforge.FlowForge
 ```
 
 View logs:
+
 ```bash
 journalctl --user -f | grep flowforge
 ```
@@ -192,6 +203,7 @@ When running as a Flatpak, FlowForge uses these directories:
 ## Permissions
 
 The Flatpak requests these permissions:
+
 - `--share=network`: For API calls
 - `--filesystem=home`: For saving/loading workflows
 - `--socket=x11` & `--socket=wayland`: For GUI

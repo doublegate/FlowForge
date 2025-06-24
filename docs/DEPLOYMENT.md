@@ -3,6 +3,7 @@
 **Last Updated**: 2025-06-24
 
 ## Current Status
+
 FlowForge v0.2.1 is ready for deployment with complete desktop distribution support, full AI integration, and workflow persistence capabilities.
 
 ## Prerequisites
@@ -52,6 +53,7 @@ FlowForge now includes complete desktop distribution via Flatpak:
 ```
 
 **Features:**
+
 - Self-contained deployment with embedded MongoDB
 - Desktop integration with `.yml` and `.yaml` file associations
 - Native desktop application experience via Electron
@@ -65,42 +67,48 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### Option 1: Docker Compose (Recommended)
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/doublegate/FlowForge.git
    cd FlowForge
    ```
 
 2. **Configure environment**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 3. **Build and start services**
+
    ```bash
    docker-compose up -d
    ```
 
 4. **Seed the database**
+
    ```bash
    docker-compose exec backend npm run seed
    ```
 
 5. **Access the application**
-   - Frontend: http://localhost
-   - API: http://localhost:3001/api/health
+   - Frontend: <http://localhost>
+   - API: <http://localhost:3001/api/health>
 
 ### Option 2: Manual Deployment
 
 #### Backend Deployment
 
 1. **Install dependencies**
+
    ```bash
    cd backend
    npm install
    ```
 
 2. **Install actionlint**
+
    ```bash
    # Linux
    curl -L https://github.com/rhysd/actionlint/releases/latest/download/actionlint_linux_amd64.tar.gz | tar xz
@@ -111,16 +119,19 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    ```
 
 3. **Start MongoDB**
+
    ```bash
    mongod --dbpath /path/to/data
    ```
 
 4. **Seed database**
+
    ```bash
    npm run seed
    ```
 
 5. **Start backend**
+
    ```bash
    npm start
    ```
@@ -128,27 +139,30 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 #### Frontend Deployment
 
 1. **Install dependencies**
+
    ```bash
    cd frontend
    npm install
    ```
 
 2. **Build for production**
+
    ```bash
    npm run build
    ```
 
 3. **Serve with Nginx**
+
    ```nginx
    server {
        listen 80;
        server_name flowforge.example.com;
        root /path/to/frontend/dist;
-       
+
        location / {
            try_files $uri $uri/ /index.html;
        }
-       
+
        location /api {
            proxy_pass http://localhost:3001;
            proxy_http_version 1.1;
@@ -170,6 +184,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    - Security groups: 80, 443, 3001, 27017
 
 2. **Install Docker**
+
    ```bash
    curl -fsSL https://get.docker.com -o get-docker.sh
    sh get-docker.sh
@@ -177,6 +192,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    ```
 
 3. **Deploy with Docker Compose**
+
    ```bash
    git clone https://github.com/doublegate/FlowForge.git
    cd FlowForge
@@ -187,23 +203,27 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 #### Heroku Deployment
 
 1. **Create Heroku apps**
+
    ```bash
    heroku create flowforge-api
    heroku create flowforge-web
    ```
 
 2. **Add MongoDB addon**
+
    ```bash
    heroku addons:create mongolab:shared-single-ssd -a flowforge-api
    ```
 
 3. **Set environment variables**
+
    ```bash
    heroku config:set GITHUB_TOKEN=xxx -a flowforge-api
    heroku config:set OPENAI_API_KEY=xxx -a flowforge-api
    ```
 
 4. **Deploy**
+
    ```bash
    # Backend
    git subtree push --prefix backend heroku-api main
@@ -215,6 +235,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 #### Kubernetes Deployment
 
 1. **Create namespace**
+
    ```yaml
    apiVersion: v1
    kind: Namespace
@@ -223,6 +244,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    ```
 
 2. **Deploy MongoDB**
+
    ```yaml
    apiVersion: apps/v1
    kind: Deployment
@@ -255,6 +277,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    ```
 
 3. **Deploy Backend**
+
    ```yaml
    apiVersion: apps/v1
    kind: Deployment
@@ -294,6 +317,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### Security
 
 1. **SSL/TLS Configuration**
+
    ```bash
    # Use Let's Encrypt with Certbot
    sudo certbot --nginx -d flowforge.example.com
@@ -334,6 +358,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### Backup & Recovery
 
 1. **Database Backup**
+
    ```bash
    # Automated daily backups
    mongodump --uri=$MONGODB_URI --out=/backups/$(date +%Y%m%d)
@@ -347,6 +372,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### CI/CD Pipeline
 
 1. **GitHub Actions Workflow**
+
    ```yaml
    name: Deploy
    on:
@@ -373,15 +399,17 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### Common Issues
 
 1. **MongoDB Connection Failed**
+
    ```bash
    # Check MongoDB status
    docker-compose logs mongodb
-   
+
    # Verify connection string
    mongo $MONGODB_URI --eval "db.stats()"
    ```
 
 2. **Rate Limiting Errors**
+
    ```bash
    # Increase rate limits in production
    # backend/index.js
@@ -392,6 +420,7 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
    ```
 
 3. **CORS Issues**
+
    ```bash
    # Verify FRONTEND_URL in .env matches actual domain
    # Check browser console for CORS errors
@@ -400,16 +429,19 @@ See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
 ### Health Checks
 
 1. **API Health**
+
    ```bash
    curl https://api.flowforge.example.com/api/health
    ```
 
 2. **Database Health**
+
    ```bash
    docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
    ```
 
 3. **Container Status**
+
    ```bash
    docker-compose ps
    docker-compose logs -f

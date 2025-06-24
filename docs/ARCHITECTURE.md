@@ -13,38 +13,39 @@ FlowForge is a full-stack web application built with a modern microservices-orie
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                           Frontend (React)                       │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │   UI Layer  │  │ State Mgmt   │  │  API Client        │    │
-│  │  - React    │  │  - Zustand   │  │  - Axios          │    │
-│  │  - ReactFlow│  │  - Hooks     │  │  - WebSocket      │    │
-│  └─────────────┘  └──────────────┘  └────────────────────┘    │
-└─────────────────────────────┬───────────────────────────────────┘
+```ascii
+┌─────────────────────────────────────────────────────────────┐
+│                           Frontend (React)                  │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │   UI Layer  │  │ State Mgmt   │  │  API Client        │  │
+│  │  - React    │  │  - Zustand   │  │  - Axios           │  │
+│  │  - ReactFlow│  │  - Hooks     │  │  - WebSocket       │  │
+│  └─────────────┘  └──────────────┘  └────────────────────┘  │
+└─────────────────────────────┬───────────────────────────────┘
                               │ HTTPS/WSS
-┌─────────────────────────────┴───────────────────────────────────┐
-│                         Backend (Node.js)                        │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │  API Layer  │  │Service Layer │  │  Data Layer       │    │
-│  │  - Express  │  │ - Business   │  │  - MongoDB        │    │
-│  │  - REST     │  │   Logic      │  │  - Mongoose       │    │
-│  └─────────────┘  └──────────────┘  └────────────────────┘    │
-└─────────────────────────────┬───────────────────────────────────┘
+┌─────────────────────────────┴───────────────────────────────┐
+│                         Backend (Node.js)                   │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │  API Layer  │  │Service Layer │  │  Data Layer        │  │
+│  │  - Express  │  │ - Business   │  │  - MongoDB         │  │
+│  │  - REST     │  │   Logic      │  │  - Mongoose        │  │
+│  └─────────────┘  └──────────────┘  └────────────────────┘  │
+└─────────────────────────────┬───────────────────────────────┘
                               │
-┌─────────────────────────────┴───────────────────────────────────┐
-│                      External Services                           │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │ GitHub API  │  │  OpenAI API  │  │   actionlint       │    │
-│  │ - Actions   │  │  - GPT-4     │  │  - Validation     │    │
-│  │ - Repos     │  │  - Workflow  │  │  - Linting        │    │
-│  └─────────────┘  └──────────────┘  └────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────┴───────────────────────────────┐
+│                      External Services                      │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ GitHub API  │  │  OpenAI API  │  │   actionlint       │  │
+│  │ - Actions   │  │  - GPT-4     │  │  - Validation      │  │
+│  │ - Repos     │  │  - Workflow  │  │  - Linting         │  │
+│  └─────────────┘  └──────────────┘  └────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Frontend Architecture
 
-### Technology Stack
+### Technology Stack -- Frontend
+
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
 - **UI Library**: React Flow for visual workflow building
@@ -54,7 +55,8 @@ FlowForge is a full-stack web application built with a modern microservices-orie
 - **Icons**: Lucide React
 
 ### Component Structure
-```
+
+```ascii
 frontend/src/
 ├── components/
 │   ├── ActionNode.tsx       # Custom node component for actions
@@ -76,6 +78,7 @@ frontend/src/
 ```
 
 ### Key Design Patterns
+
 1. **Drag-and-Drop**: Actions can be dragged from sidebar to canvas
 2. **Visual Programming**: Nodes represent actions, edges represent dependencies
 3. **Real-time Preview**: YAML updates as workflow changes
@@ -87,7 +90,8 @@ frontend/src/
 
 ## Backend Architecture
 
-### Technology Stack
+### Technology Stack -- Backend
+
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose ODM
@@ -97,7 +101,8 @@ frontend/src/
 - **Logging**: Morgan
 
 ### API Structure
-```
+
+```ascii
 backend/
 ├── models/
 │   ├── Action.js            # GitHub Action metadata schema
@@ -124,17 +129,20 @@ backend/
 ### API Endpoints
 
 #### Actions
+
 - `GET /api/actions` - List all actions with filtering
 - `GET /api/actions/:id` - Get specific action details
 - `POST /api/actions/search` - Advanced action search
 
 #### Workflows
+
 - `GET /api/templates` - Get workflow templates
 - `POST /api/workflows/validate` - Validate YAML syntax
 - `POST /api/workflows/optimize` - Get optimization suggestions
 - `POST /api/workflows/save` - Save custom workflow
 
 #### AI Integration
+
 - `POST /api/ai/generate` - Generate workflow from prompt
 - `POST /api/ai/suggest` - Get action suggestions
 - `POST /api/ai/explain` - Explain workflow purpose
@@ -142,6 +150,7 @@ backend/
 ## Data Models
 
 ### Action Schema
+
 ```javascript
 {
   name: String,
@@ -152,7 +161,7 @@ backend/
   stars: Number,
   lastUpdated: Date,
   inputs: Map,              // Input parameters with validation
-  outputs: Map,             // Output variables  
+  outputs: Map,             // Output variables
   runs: Object,             // Execution config
   branding: Object,         // Icon and color
   keywords: [String],       // For enhanced search
@@ -165,10 +174,12 @@ backend/
 ```
 
 ### Categories
+
 The system uses 14 intelligent categories:
+
 - **setup**: Environment and tool setup (Node.js, Python, etc.)
 - **build**: Compilation and building
-- **test**: Testing and quality assurance  
+- **test**: Testing and quality assurance
 - **deploy**: Deployment to various platforms
 - **security**: Security scanning and compliance
 - **docker**: Container operations
@@ -182,6 +193,7 @@ The system uses 14 intelligent categories:
 - **mobile**: Mobile app specific actions
 
 ### WorkflowTemplate Schema
+
 ```javascript
 {
   name: String,
@@ -196,6 +208,7 @@ The system uses 14 intelligent categories:
 ## External Integrations
 
 ### GitHub API
+
 - **Purpose**: Fetch action metadata and repository information
 - **Authentication**: Personal Access Token with proper scopes
 - **Rate Limiting**: 5000 requests/hour (authenticated)
@@ -208,6 +221,7 @@ The system uses 14 intelligent categories:
   - Batch processing for efficiency
 
 ### OpenAI API
+
 - **Purpose**: Natural language workflow generation
 - **Model**: GPT-4 (gpt-4-turbo-preview)
 - **Rate Limiting**: Custom limits (20 req/15min)
@@ -220,6 +234,7 @@ The system uses 14 intelligent categories:
   - Multi-step workflow understanding
 
 ### actionlint
+
 - **Purpose**: YAML syntax validation
 - **Integration**: CLI tool via child process
 - **Performance**: Sub-second validation
@@ -260,6 +275,7 @@ The system uses 14 intelligent categories:
 ## Deployment Architecture
 
 ### Docker Deployment
+
 ```yaml
 Services:
   - MongoDB (Database)
@@ -268,6 +284,7 @@ Services:
 ```
 
 ### Production Considerations
+
 - Horizontal scaling for API servers
 - MongoDB replica set for high availability
 - CDN for static assets

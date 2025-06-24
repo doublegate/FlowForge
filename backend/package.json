@@ -22,6 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "@octokit/rest": "^20.0.2",
+    "actionlint": "^2.0.6",
     "axios": "^1.6.2",
     "cheerio": "^1.1.0",
     "cors": "^2.8.5",

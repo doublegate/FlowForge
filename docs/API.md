@@ -4,16 +4,19 @@
 **Version**: 0.2.1
 
 ## Base URL
-```
+
+```ascii
 Development: http://localhost:3001/api
 Production: https://api.flowforge.dev/api
 Desktop: http://localhost:3001/api (embedded in Flatpak)
 ```
 
 ## Authentication
+
 Currently, the API is open. Future versions will implement JWT-based authentication.
 
 ## Rate Limiting
+
 - General endpoints: 100 requests per 15 minutes
 - AI endpoints: 20 requests per 15 minutes
 
@@ -22,17 +25,20 @@ Currently, the API is open. Future versions will implement JWT-based authenticat
 ### Actions
 
 #### List Actions
+
 ```http
 GET /api/actions
 ```
 
 Query Parameters:
+
 - `category` (string): Filter by category (build, test, deploy, etc.)
 - `search` (string): Search in name, description, or repository
 - `limit` (number): Results per page (default: 50)
 - `offset` (number): Pagination offset (default: 0)
 
 Response:
+
 ```json
 {
   "actions": [
@@ -59,11 +65,13 @@ Response:
 ```
 
 #### Get Action Details
+
 ```http
 GET /api/actions/:id
 ```
 
 Response:
+
 ```json
 {
   "_id": "action_id",
@@ -100,11 +108,13 @@ Response:
 ### AI Integration
 
 #### Generate Workflow
+
 ```http
 POST /api/ai/generate-workflow
 ```
 
 Request Body:
+
 ```json
 {
   "prompt": "Create a workflow that builds and tests a Node.js application",
@@ -117,6 +127,7 @@ Request Body:
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -174,11 +185,13 @@ Response:
 ```
 
 #### Get Workflow Suggestions
+
 ```http
 POST /api/ai/suggest
 ```
 
 Request Body:
+
 ```json
 {
   "context": "React application with TypeScript",
@@ -188,6 +201,7 @@ Request Body:
 ```
 
 Response:
+
 ```json
 {
   "suggestions": [
@@ -208,11 +222,13 @@ Response:
 ### Workflows
 
 #### Validate Workflow
+
 ```http
 POST /api/workflows/validate
 ```
 
 Request Body:
+
 ```json
 {
   "yaml": "name: My Workflow\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest"
@@ -220,6 +236,7 @@ Request Body:
 ```
 
 Response:
+
 ```json
 {
   "valid": true,
@@ -228,6 +245,7 @@ Response:
 ```
 
 Error Response:
+
 ```json
 {
   "valid": false,
@@ -239,15 +257,18 @@ Error Response:
 ```
 
 #### Get Workflow Templates
+
 ```http
 GET /api/templates
 ```
 
 Query Parameters:
+
 - `category` (string): Filter by category
 - `search` (string): Search in name, description, or tags
 
 Response:
+
 ```json
 [
   {
@@ -271,11 +292,13 @@ Response:
 ```
 
 #### Optimize Workflow
+
 ```http
 POST /api/workflows/optimize
 ```
 
 Request Body:
+
 ```json
 {
   "workflow": {
@@ -290,6 +313,7 @@ Request Body:
 ```
 
 Response:
+
 ```json
 {
   "optimizations": [
@@ -311,11 +335,13 @@ Response:
 ### Health Check
 
 #### System Health
+
 ```http
 GET /api/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -337,6 +363,7 @@ All endpoints follow a consistent error format:
 ```
 
 Common HTTP status codes:
+
 - `200`: Success
 - `400`: Bad Request
 - `404`: Not Found
@@ -346,6 +373,7 @@ Common HTTP status codes:
 ## Webhook Events (Future)
 
 The API will support webhooks for:
+
 - Workflow execution status
 - Action updates
 - Template usage statistics
@@ -353,6 +381,7 @@ The API will support webhooks for:
 ## SDK Examples
 
 ### JavaScript/TypeScript
+
 ```typescript
 import axios from 'axios';
 
@@ -375,6 +404,7 @@ const workflow = await flowforgeAPI.post('/ai/generate', {
 ```
 
 ### Python
+
 ```python
 import requests
 
@@ -395,6 +425,7 @@ validation = response.json()
 ```
 
 ### cURL
+
 ```bash
 # List actions
 curl "http://localhost:3001/api/actions?category=deployment&limit=10"

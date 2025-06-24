@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // API configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -46,30 +46,32 @@ export const apiService = {
   health: () => api.get('/api/health'),
 
   // Actions
-  getActions: () => api.get('/api/actions'),
-  searchActions: (query: string) => api.get('/api/actions/search', { params: { q: query } }),
-  getActionByRepo: (owner: string, repo: string) => 
-    api.get(`/api/actions/${owner}/${repo}`),
-  discoverActions: (url: string) => 
-    api.post('/api/actions/discover', { url }),
+  getActions: (params?: { limit?: number; offset?: number; category?: string; search?: string }) => 
+    api.get('/api/actions', { params }),
+  getActionById: (id: string) => api.get(`/api/actions/${id}`),
+  searchActions: (query: string) => 
+    api.post('/api/actions/search', { query }),
+  updateActions: () => api.post('/api/actions/update'),
+
+  // Categories
+  getCategories: () => api.get('/api/categories'),
 
   // Templates
-  getTemplates: () => api.get('/api/templates'),
-  getTemplatesByCategory: (category: string) => 
-    api.get('/api/templates/category', { params: { category } }),
+  getTemplates: (params?: { category?: string; search?: string }) => 
+    api.get('/api/templates', { params }),
   getTemplateById: (id: string) => api.get(`/api/templates/${id}`),
 
   // AI Assistant
   generateWorkflow: (prompt: string) => 
     api.post('/api/ai/generate-workflow', { prompt }),
-  explainWorkflow: (workflow: any) => 
-    api.post('/api/ai/explain', { workflow }),
   getSuggestions: (workflow: any, context?: string) => 
     api.post('/api/ai/suggest', { workflow, context }),
 
   // Workflow validation
-  validateYaml: (yaml: string) => 
-    api.post('/api/validate/yaml', { yaml }),
+  validateWorkflow: (yaml: string) => 
+    api.post('/api/workflows/validate', { yaml }),
+  optimizeWorkflow: (workflow: any) => 
+    api.post('/api/workflows/optimize', { workflow }),
 
   // Workflow persistence (to be implemented)
   saveWorkflow: (workflow: any) => 

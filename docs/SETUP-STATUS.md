@@ -18,7 +18,7 @@
   - Added missing dependencies: `cheerio` and `lru-cache`
   - Total: 515 packages
   - No vulnerabilities found
-  
+
 - **Frontend**: All npm packages installed successfully
   - Total: 516 packages
   - 4 moderate vulnerabilities (can be addressed later)
@@ -77,6 +77,7 @@ docker-compose up -d
 ### Distribution Status
 
 ✅ **Flatpak Packaging Complete**
+
 - All build scripts consolidated in `scripts/` directory
 - Unified build system with `build-flowforge.sh`
 - Generated production-ready distributable: `flowforge-0.2.0-linux-x64.tar.gz`

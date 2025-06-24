@@ -13,16 +13,10 @@ interface Workflow {
 }
 
 interface WorkflowManagerProps {
-  nodes: any[];
-  edges: any[];
-  onLoadWorkflow: (nodes: any[], edges: any[]) => void;
   onClose: () => void;
 }
 
 export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
-  nodes,
-  edges,
-  onLoadWorkflow,
   onClose
 }) => {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);

@@ -245,17 +245,32 @@ The system uses 14 intelligent categories:
    - Helmet.js for security headers
    - CORS configuration for frontend origin
    - Rate limiting per IP address
-   - Input validation and sanitization
+   - Comprehensive input validation and sanitization
+   - NoSQL injection prevention with regex escaping
+   - Bounds checking for all numeric inputs
 
-2. **Authentication** (Planned)
+2. **Process Security** 🆕
+   - Shell command injection prevention using `execFile()`
+   - Secure external command execution with timeouts
+   - File write protection with sanitization and permission restrictions
+   - Buffer limits to prevent resource exhaustion
+
+3. **Input Validation** 🆕
+   - YAML content validation before processing
+   - Control character removal and length limits
+   - Type validation for structured data
+   - ReDoS protection with input size limits
+
+4. **Authentication** (Planned)
    - JWT-based authentication
    - OAuth integration with GitHub
    - Role-based access control
 
-3. **Data Protection**
+5. **Data Protection**
    - Environment variables for secrets
    - No sensitive data in logs
    - HTTPS enforcement in production
+   - Secure temp file handling with random suffixes
 
 ## Performance Optimizations
 

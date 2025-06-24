@@ -5,6 +5,83 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2025-06-24
+
+### 🛡️ SECURITY HARDENING RELEASE: Critical Vulnerability Fixes
+
+This release addresses critical security vulnerabilities discovered by CodeQL analysis and implements comprehensive security hardening across the entire application.
+
+### 🔒 Security Fixes
+
+- **CRITICAL: Shell Command Injection (CWE-78)**
+  - Replaced vulnerable `exec()` with secure `execFile()` in YAML validation
+  - Eliminated shell injection vulnerabilities in actionlint execution
+  - Added timeout protection and buffer limits for external processes
+
+- **CRITICAL: MongoDB NoSQL Injection**
+  - Fixed regex injection vulnerabilities in `/api/actions` and `/api/templates` endpoints
+  - Implemented regex escaping with `String(input).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')`
+  - Added input sanitization and length limits
+
+- **HIGH: Network Data Written to File (CWE-434, CWE-912)**
+  - Added comprehensive YAML content validation before file writes
+  - Implemented control character removal and content sanitization
+  - Restricted temp file permissions (0o600) for security
+  - Added YAML syntax validation using `yaml.load()`
+
+### 🛡️ Input Validation & Sanitization
+
+- **Workflow Data Validation**
+  - Added length limits for names (200 chars), descriptions (1000 chars), YAML (50KB)
+  - Array validation and size limits (nodes: 100, edges: 200, tags: 20)
+  - Type coercion for boolean values and proper error handling
+
+- **API Parameter Validation**
+  - Bounds checking for pagination parameters (limit: 1-100, offset: 0+)
+  - Category input sanitization (max 50 chars)
+  - AI prompt validation (5-2000 characters)
+
+- **Search Input Protection**
+  - Regex escaping for all search queries to prevent ReDoS attacks
+  - Input length limits to prevent denial of service
+  - Safe regex patterns throughout the application
+
+### 🔧 Process Security Enhancements
+
+- **Secure External Command Execution**
+  - Replaced all `exec()` calls with `execFile()` for argument safety
+  - Added 10-second timeouts for actionlint validation
+  - Implemented 1MB buffer limits to prevent resource exhaustion
+  - Enhanced error handling for process failures
+
+- **File System Security**
+  - Secure temp file generation with random suffixes
+  - Proper file permission restrictions (read/write owner only)
+  - Guaranteed cleanup of temporary files on all code paths
+  - Input sanitization before file writes
+
+### 📋 Security Compliance
+
+- **CWE-78**: Command Injection - **FIXED** with `execFile()` implementation
+- **CWE-88**: Argument Injection - **FIXED** with array argument passing
+- **CWE-912**: Hidden Functionality - **FIXED** with input validation
+- **CWE-434**: File Upload - **FIXED** with content sanitization
+- **NoSQL Injection**: **FIXED** with regex escaping and bounds checking
+- **ReDoS (Regular Expression DoS)**: **FIXED** with input size limits
+
+### 🧪 Testing & Validation
+
+- All security fixes tested with ESLint compliance
+- Backend startup validation confirms fixes don't break functionality
+- Comprehensive error handling maintains user experience
+- Input validation provides clear error messages
+
+### 📝 Documentation Updates
+
+- Updated README.md with security hardening features
+- Enhanced PROJECT-STATUS.md with security compliance details
+- Added security fix documentation to CHANGELOG.md
+
 ## [0.3.2] - 2025-06-24
 
 ### 🚀 CI/CD & INFRASTRUCTURE RELEASE: Production Automation

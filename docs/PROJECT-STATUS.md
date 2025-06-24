@@ -1,8 +1,8 @@
 # FlowForge Project Status
 
 **Last Updated**: 2025-06-24
-**Current Version**: 0.3.2
-**Status**: Production - Full CI/CD Automation & Performance Monitoring
+**Current Version**: 0.3.3
+**Status**: Production - Security Hardened with Full CI/CD Automation
 
 ## 🎉 Completed Milestones
 
@@ -321,6 +321,23 @@
 - **Security Integration**: Automated vulnerability scanning and CodeQL
 - **Performance Monitoring**: Lighthouse CI with accessibility compliance
 - **Release Automation**: Semantic versioning with Docker publishing
+
+## 🛡️ Security Hardening (v0.3.3)
+
+### Critical Security Fixes
+- **MongoDB Injection Prevention**: Fixed regex injection vulnerabilities in search endpoints
+- **Shell Command Injection**: Replaced `exec()` with `execFile()` for actionlint validation
+- **Input Validation**: Comprehensive sanitization of all user inputs
+- **File Write Security**: Secure temp file handling with proper permissions
+- **Process Security**: Timeout protection and buffer limits for external commands
+
+### Security Compliance
+- **CWE-78**: Command injection prevention with `execFile()`
+- **CWE-88**: Argument injection mitigation
+- **CWE-912**: Hidden functionality elimination  
+- **CWE-434**: File upload validation and sanitization
+- **NoSQL Injection**: Regex escaping and input bounds checking
+- **ReDoS Protection**: Input size limits and safe regex patterns
 
 ### Quality Metrics Achieved
 - **Lighthouse Performance**: 95+ score

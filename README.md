@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.3.2-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.3.3-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
   <img src="https://img.shields.io/badge/status-stable-green.svg" alt="Status">
@@ -30,7 +30,8 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 - 🖥️ **Native Desktop App** - Electron wrapper with embedded MongoDB
 - 🔧 **Unified Build System** - Automated build scripts for all platforms
 - 🚀 **CI/CD Pipeline** - Comprehensive GitHub Actions with advanced caching
-- 🔒 **Security Scanning** - Automated vulnerability detection with CodeQL
+- 🔒 **Security Hardened** - Comprehensive input validation and injection protection
+- 🛡️ **Security Scanning** - Automated vulnerability detection with CodeQL
 - 📊 **Performance Monitoring** - Lighthouse CI with accessibility testing
 
 ## 🚀 Quick Start
@@ -185,6 +186,7 @@ FlowForge is currently in **production** with **Phase 1 & 2 FULLY COMPLETE** and
   - [x] Automated dependency updates and maintenance
   - [x] Release automation with semantic versioning
   - [x] Accessibility testing and compliance (98+ score)
+  - [x] Comprehensive security hardening with injection protection
   
 - [ ] **Phase 3: Enterprise Features** (Next - Planning Stage)
   - [ ] JWT-based authentication and team collaboration

@@ -29,7 +29,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
@@ -465,7 +465,7 @@ Please ensure the workflow includes:
 - Efficient job structure with parallelization where possible`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: enhancedPrompt }
@@ -489,7 +489,9 @@ Please ensure the workflow includes:
     
     return result;
   } catch (error) {
-    console.error('AI generation error:', error);
+    console.error('AI generation error:', error.message);
+    console.error('Error details:', error);
+    console.error('OpenAI API Key present:', !!process.env.OPENAI_API_KEY);
     
     // Fallback to a simple template if AI fails
     return {
@@ -524,15 +526,56 @@ Please ensure the workflow includes:
  * @returns {Promise<Object>} Validation result
  */
 async function validateWorkflow(yamlContent) {
-  const execAsync = promisify(exec);
-  const tempFile = path.join(__dirname, `temp_${Date.now()}.yml`);
+  const execFileAsync = promisify(execFile);
+  
+  // Input validation and sanitization
+  if (typeof yamlContent !== 'string') {
+    return {
+      valid: false,
+      errors: ['Invalid YAML content: must be a string']
+    };
+  }
+  
+  // Limit YAML size to prevent DoS
+  if (yamlContent.length > 100000) { // 100KB limit
+    return {
+      valid: false,
+      errors: ['YAML content too large (max 100KB)']
+    };
+  }
+  
+  // Basic YAML structure validation
+  try {
+    yaml.load(yamlContent);
+  } catch (yamlError) {
+    return {
+      valid: false,
+      errors: [`Invalid YAML syntax: ${yamlError.message}`]
+    };
+  }
+  
+  // Generate secure temp filename with random suffix
+  const randomSuffix = Math.random().toString(36).substring(2, 15);
+  const tempFile = path.join(__dirname, `temp_workflow_${Date.now()}_${randomSuffix}.yml`);
   
   try {
-    // Write YAML to temporary file
-    await fs.writeFile(tempFile, yamlContent);
+    // Sanitize YAML content before writing - remove control characters
+    const sanitizedContent = yamlContent
+      .split('').filter(char => {
+        const code = char.charCodeAt(0);
+        // Keep printable characters, newlines, tabs, and carriage returns
+        return code >= 32 || code === 9 || code === 10 || code === 13;
+      }).join('')
+      .substring(0, 100000); // Enforce size limit
     
-    // Run actionlint
-    const { stderr } = await execAsync(`actionlint ${tempFile}`);
+    // Write YAML to temporary file
+    await fs.writeFile(tempFile, sanitizedContent, { mode: 0o600 }); // Restrict file permissions
+    
+    // Run actionlint using execFile for security (prevents shell injection)
+    const { stderr } = await execFileAsync('actionlint', [tempFile], {
+      timeout: 10000, // 10 second timeout
+      maxBuffer: 1024 * 1024 // 1MB max output
+    });
     
     // Clean up temp file
     await fs.unlink(tempFile);
@@ -557,8 +600,25 @@ async function validateWorkflow(yamlContent) {
       console.debug(`Failed to clean up temp file ${tempFile}: ${cleanupError.message}`);
     }
     
-    // Parse actionlint errors
-    const errors = error.stdout ? error.stdout.split('\n').filter(line => line.trim()) : ['Unknown validation error'];
+    // Handle different types of errors
+    if (error.code === 'ENOENT') {
+      return {
+        valid: false,
+        errors: ['actionlint not found - please install actionlint binary']
+      };
+    }
+    
+    if (error.killed || error.signal === 'SIGTERM') {
+      return {
+        valid: false,
+        errors: ['Validation timeout - YAML file too complex']
+      };
+    }
+    
+    // Parse actionlint errors from stdout
+    const errors = error.stdout ? 
+      error.stdout.split('\n').filter(line => line.trim()) : 
+      [`Validation error: ${error.message}`];
     
     return {
       valid: false,
@@ -576,6 +636,10 @@ async function validateWorkflow(yamlContent) {
 app.get('/api/actions', apiLimiter, async (req, res) => {
   try {
     const { category, search, limit = 50, offset = 0 } = req.query;
+    
+    // Input validation and sanitization
+    const sanitizedLimit = Math.max(1, Math.min(100, parseInt(limit) || 50));
+    const sanitizedOffset = Math.max(0, parseInt(offset) || 0);
     
     let query = {};
     if (category) {
@@ -598,8 +662,8 @@ app.get('/api/actions', apiLimiter, async (req, res) => {
     }
 
     const actions = await Action.find(query)
-      .limit(parseInt(limit))
-      .skip(parseInt(offset))
+      .limit(sanitizedLimit)
+      .skip(sanitizedOffset)
       .sort({ stars: -1 });
 
     const total = await Action.countDocuments(query);
@@ -607,8 +671,8 @@ app.get('/api/actions', apiLimiter, async (req, res) => {
     res.json({
       actions,
       total,
-      limit: parseInt(limit),
-      offset: parseInt(offset)
+      limit: sanitizedLimit,
+      offset: sanitizedOffset
     });
   } catch (error) {
     console.error('Error fetching actions:', error);
@@ -646,8 +710,14 @@ app.post('/api/ai/generate-workflow', aiLimiter, async (req, res) => {
     if (!prompt) {
       return res.status(400).json({ error: 'Prompt is required' });
     }
+    
+    // Sanitize and validate prompt
+    const sanitizedPrompt = String(prompt).substring(0, 2000).trim();
+    if (sanitizedPrompt.length < 5) {
+      return res.status(400).json({ error: 'Prompt must be at least 5 characters long' });
+    }
 
-    const suggestion = await generateWorkflowWithAI(prompt);
+    const suggestion = await generateWorkflowWithAI(sanitizedPrompt);
     res.json(suggestion);
   } catch (error) {
     console.error('Error generating workflow:', error);
@@ -715,7 +785,7 @@ ${JSON.stringify(workflow, null, 2)}
 ${context ? `Additional context: ${context}` : ''}`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
@@ -779,6 +849,7 @@ app.get('/api/templates', apiLimiter, async (req, res) => {
     }
     if (search && typeof search === 'string') { // Validate search is a string
       const sanitizedSearch = search.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'); // Sanitize search input
+      
       query.$or = [
         { name: { $regex: sanitizedSearch, $options: 'i' } },
         { description: { $regex: sanitizedSearch, $options: 'i' } },
@@ -851,8 +922,9 @@ app.post('/api/workflows/optimize', apiLimiter, async (req, res) => {
  */
 app.get('/api/workflows', apiLimiter, async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    // Input validation and sanitization for pagination
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
     
     const query = req.query.public === 'true' ? { isPublic: true } : {};
@@ -907,18 +979,34 @@ app.post('/api/workflows', apiLimiter, async (req, res) => {
   try {
     const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
     
+    // Input validation
     if (!name || !nodes || !edges) {
       return res.status(400).json({ error: 'Name, nodes, and edges are required' });
     }
     
+    // Sanitize string inputs
+    const sanitizedName = String(name).substring(0, 200).trim();
+    const sanitizedDescription = description ? String(description).substring(0, 1000).trim() : undefined;
+    const sanitizedYaml = yaml ? String(yaml).substring(0, 50000) : undefined;
+    
+    // Validate arrays
+    if (!Array.isArray(nodes) || !Array.isArray(edges)) {
+      return res.status(400).json({ error: 'Nodes and edges must be arrays' });
+    }
+    
+    // Validate tags if provided
+    const sanitizedTags = Array.isArray(tags) ? 
+      tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+      undefined;
+    
     const workflow = new Workflow({
-      name,
-      description,
-      nodes,
-      edges,
-      yaml,
-      tags,
-      isPublic: isPublic || false
+      name: sanitizedName,
+      description: sanitizedDescription,
+      nodes: nodes.slice(0, 100), // Limit number of nodes
+      edges: edges.slice(0, 200), // Limit number of edges
+      yaml: sanitizedYaml,
+      tags: sanitizedTags,
+      isPublic: Boolean(isPublic)
     });
     
     await workflow.save();
@@ -944,14 +1032,36 @@ app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Workflow not found' });
     }
     
-    // Update fields
-    if (name !== undefined) workflow.name = name;
-    if (description !== undefined) workflow.description = description;
-    if (nodes !== undefined) workflow.nodes = nodes;
-    if (edges !== undefined) workflow.edges = edges;
-    if (yaml !== undefined) workflow.yaml = yaml;
-    if (tags !== undefined) workflow.tags = tags;
-    if (isPublic !== undefined) workflow.isPublic = isPublic;
+    // Update fields with sanitization
+    if (name !== undefined) {
+      workflow.name = String(name).substring(0, 200).trim();
+    }
+    if (description !== undefined) {
+      workflow.description = description ? String(description).substring(0, 1000).trim() : '';
+    }
+    if (nodes !== undefined) {
+      if (!Array.isArray(nodes)) {
+        return res.status(400).json({ error: 'Nodes must be an array' });
+      }
+      workflow.nodes = nodes.slice(0, 100);
+    }
+    if (edges !== undefined) {
+      if (!Array.isArray(edges)) {
+        return res.status(400).json({ error: 'Edges must be an array' });
+      }
+      workflow.edges = edges.slice(0, 200);
+    }
+    if (yaml !== undefined) {
+      workflow.yaml = yaml ? String(yaml).substring(0, 50000) : '';
+    }
+    if (tags !== undefined) {
+      workflow.tags = Array.isArray(tags) ? 
+        tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+        [];
+    }
+    if (isPublic !== undefined) {
+      workflow.isPublic = Boolean(isPublic);
+    }
     
     await workflow.save();
     

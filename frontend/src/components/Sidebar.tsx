@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Zap, Filter, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Zap, Filter, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
 import { apiService } from '../services/api';
 import type { ActionMetadata as ActionType, ActionInput, ActionOutput } from '../types';
 
@@ -35,36 +35,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   // Fetch actions and categories from backend
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [actionsResponse, categoriesResponse] = await Promise.all([
-          apiService.getActions({ limit: 500 }),
-          apiService.getCategories()
-        ]);
+  const fetchData = async () => {
+    try {
+      setError(null);
+      setRefreshing(true);
+      const [actionsResponse, categoriesResponse] = await Promise.all([
+        apiService.getActions({ limit: 500 }),
+        apiService.getCategories()
+      ]);
 
-        if (actionsResponse.data?.actions) {
-          setActions(actionsResponse.data.actions);
-        }
-
-        if (categoriesResponse.data) {
-          // Count actions per category
-          const categoriesWithCount = categoriesResponse.data.map((cat: Category) => ({
-            ...cat,
-            count: actionsResponse.data?.actions?.filter((action: ActionMetadata) => 
-              action.category === cat.id
-            ).length || 0
-          }));
-          setCategories(categoriesWithCount);
-        }
-      } catch (err) {
-        console.error('Failed to fetch data:', err);
-        setError('Failed to load actions. Please try again.');
+      if (actionsResponse.data?.actions) {
+        setActions(actionsResponse.data.actions);
       }
-    };
 
+      if (categoriesResponse.data) {
+        // Count actions per category
+        const categoriesWithCount = categoriesResponse.data.map((cat: Category) => ({
+          ...cat,
+          count: actionsResponse.data?.actions?.filter((action: ActionMetadata) => 
+            action.category === cat.id
+          ).length || 0
+        }));
+        setCategories(categoriesWithCount);
+      }
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+      setError('Failed to load actions. Please try again.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -126,11 +131,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="w-80 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Zap className="w-6 h-6 text-blue-500" />
-          FlowForge
-        </h1>
-        <p className="text-sm text-gray-600 mt-1">Visual GitHub Actions Builder</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Zap className="w-6 h-6 text-blue-500" />
+              FlowForge
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Visual GitHub Actions Builder</p>
+          </div>
+          <button
+            onClick={fetchData}
+            disabled={refreshing}
+            className="p-2 text-gray-500 hover:text-blue-500 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh actions"
+          >
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       {/* Search */}

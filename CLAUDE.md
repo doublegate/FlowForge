@@ -71,6 +71,7 @@ docker-compose up -d
   - OpenAI API: Powers natural language workflow generation
   - actionlint: External CLI tool for YAML validation
 - **Caching**: LRU cache for API responses (6-hour TTL)
+- **Security**: Comprehensive input validation and injection protection
 
 ### Key Integration Points
 

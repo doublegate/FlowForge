@@ -19,6 +19,7 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'react-flow': ['reactflow'],
+          'editor': ['@monaco-editor/react'],
           'ui': ['axios', 'lucide-react']
         }
       }

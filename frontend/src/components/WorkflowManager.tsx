@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Upload, Download, Share2, Copy, Trash2, FolderOpen, X } from 'lucide-react';
+import { Save, Upload, Trash2, FolderOpen, X } from 'lucide-react';
 import { apiService } from '../services/api';
 
 interface Workflow {
@@ -126,7 +126,7 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
     }
   };
 
-  const generateYamlFromFlow = (nodes: any[], edges: any[]) => {
+  const generateYamlFromFlow = (nodes: any[], _edges: any[]) => {
     const workflow = {
       name: workflowName || 'My Workflow',
       on: ['push'],

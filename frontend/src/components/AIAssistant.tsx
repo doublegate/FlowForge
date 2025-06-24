@@ -85,11 +85,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   };
 
   const suggestedPrompts = [
-    "Create a Node.js CI/CD pipeline with testing and deployment",
-    "Build a Python workflow with linting, testing, and Docker",
-    "Set up a React app deployment to GitHub Pages",
-    "Create a security scanning workflow for a JavaScript project",
-    "Build a multi-platform release workflow with artifacts"
+    'Create a Node.js CI/CD pipeline with testing and deployment',
+    'Build a Python workflow with linting, testing, and Docker',
+    'Set up a React app deployment to GitHub Pages',
+    'Create a security scanning workflow for a JavaScript project',
+    'Build a multi-platform release workflow with artifacts'
   ];
 
   return (
@@ -167,8 +167,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                     message.type === 'user'
                       ? 'bg-purple-500 text-white'
                       : message.content.startsWith('Error:')
-                      ? 'bg-red-50 text-red-700 border border-red-200'
-                      : 'bg-gray-100 text-gray-700'
+                        ? 'bg-red-50 text-red-700 border border-red-200'
+                        : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {message.type === 'assistant' && message.content.startsWith('Error:') && (
@@ -228,10 +228,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                         <div key={index} className="flex items-start gap-2 p-2 bg-gray-50 rounded-md">
                           <div className={`w-2 h-2 rounded-full mt-1.5 ${
                             action.category === 'setup' ? 'bg-blue-500' :
-                            action.category === 'build' ? 'bg-green-500' :
-                            action.category === 'test' ? 'bg-yellow-500' :
-                            action.category === 'deploy' ? 'bg-purple-500' :
-                            'bg-gray-500'
+                              action.category === 'build' ? 'bg-green-500' :
+                                action.category === 'test' ? 'bg-yellow-500' :
+                                  action.category === 'deploy' ? 'bg-purple-500' :
+                                    'bg-gray-500'
                           }`} />
                           <div className="flex-1">
                             <p className="text-sm font-medium text-gray-700">{action.name}</p>

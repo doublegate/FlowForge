@@ -140,7 +140,7 @@ const workflowTemplates = [
         deploy: {
           needs: 'test',
           'runs-on': 'ubuntu-latest',
-          if: "github.ref == 'refs/heads/main'",
+          if: 'github.ref == \'refs/heads/main\'',
           steps: [
             {
               uses: 'actions/checkout@v4'
@@ -208,7 +208,7 @@ flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statist
         publish: {
           needs: 'test',
           'runs-on': 'ubuntu-latest',
-          if: "github.event_name == 'release'",
+          if: 'github.event_name == \'release\'',
           steps: [
             {
               uses: 'actions/checkout@v4'
@@ -420,7 +420,7 @@ pip install build`
               uses: 'actions/cache@v3',
               with: {
                 path: '~/.cargo/registry',
-                key: "${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}"
+                key: '${{ runner.os }}-cargo-registry-${{ hashFiles(\'**/Cargo.lock\') }}'
               }
             },
             {
@@ -428,7 +428,7 @@ pip install build`
               uses: 'actions/cache@v3',
               with: {
                 path: '~/.cargo/git',
-                key: "${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}"
+                key: '${{ runner.os }}-cargo-index-${{ hashFiles(\'**/Cargo.lock\') }}'
               }
             },
             {
@@ -436,7 +436,7 @@ pip install build`
               uses: 'actions/cache@v3',
               with: {
                 path: 'target',
-                key: "${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}"
+                key: '${{ runner.os }}-cargo-build-target-${{ hashFiles(\'**/Cargo.lock\') }}'
               }
             },
             {
@@ -534,7 +534,7 @@ pip install build`
 /**
  * Sample GitHub Actions to seed the database
  */
-const sampleActions = [
+const _sampleActions = [
   {
     name: 'Checkout',
     description: 'Checkout a Git repository at a particular version',

@@ -44,14 +44,14 @@ const getCategoryColor = (category: string) => {
 
 const getStatusIcon = (status?: string) => {
   switch (status) {
-    case 'running':
-      return <Clock className="w-3 h-3 text-blue-500 animate-pulse" />;
-    case 'success':
-      return <CheckCircle className="w-3 h-3 text-green-500" />;
-    case 'error':
-      return <AlertTriangle className="w-3 h-3 text-red-500" />;
-    default:
-      return null;
+  case 'running':
+    return <Clock className="w-3 h-3 text-blue-500 animate-pulse" />;
+  case 'success':
+    return <CheckCircle className="w-3 h-3 text-green-500" />;
+  case 'error':
+    return <AlertTriangle className="w-3 h-3 text-red-500" />;
+  default:
+    return null;
   }
 };
 
@@ -68,9 +68,9 @@ export const ActionNode: React.FC<ActionNodeProps> = ({ data, selected }) => {
       className={`
         relative bg-white rounded-lg shadow-sm border-2 transition-all duration-200
         ${selected 
-          ? 'border-blue-500 shadow-lg scale-105' 
-          : `${categoryStyle.border} hover:shadow-md hover:scale-102`
-        }
+      ? 'border-blue-500 shadow-lg scale-105' 
+      : `${categoryStyle.border} hover:shadow-md hover:scale-102`
+    }
         min-w-[240px] max-w-[300px]
       `}
     >
@@ -87,13 +87,13 @@ export const ActionNode: React.FC<ActionNodeProps> = ({ data, selected }) => {
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`w-2 h-2 rounded-full ${
               data.category === 'setup' ? 'bg-blue-500' :
-              data.category === 'build' ? 'bg-green-500' :
-              data.category === 'test' ? 'bg-yellow-500' :
-              data.category === 'deploy' ? 'bg-purple-500' :
-              data.category === 'security' ? 'bg-red-500' :
-              data.category === 'docker' ? 'bg-cyan-500' :
-              data.category === 'cloud' ? 'bg-indigo-500' :
-              'bg-gray-500'
+                data.category === 'build' ? 'bg-green-500' :
+                  data.category === 'test' ? 'bg-yellow-500' :
+                    data.category === 'deploy' ? 'bg-purple-500' :
+                      data.category === 'security' ? 'bg-red-500' :
+                        data.category === 'docker' ? 'bg-cyan-500' :
+                          data.category === 'cloud' ? 'bg-indigo-500' :
+                            'bg-gray-500'
             }`} />
             <h3 className={`font-semibold text-sm truncate ${categoryStyle.text}`}>
               {data.name || 'Unnamed Step'}

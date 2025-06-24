@@ -34,7 +34,7 @@ const FlowForge = () => {
   const [showWorkflowManager, setShowWorkflowManager] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentAction, setCurrentAction] = useState<ActionMetadata | null>(null);
+  const [_currentAction, setCurrentAction] = useState<ActionMetadata | null>(null);
 
   // Handle AI workflow generation
   const handleAIWorkflowGenerated = useCallback((aiResponse: any) => {

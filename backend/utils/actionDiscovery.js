@@ -16,10 +16,10 @@
  * @version 1.0.0
  */
 
-const axios = require('axios');
+const _axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
-const cheerio = require('cheerio');
+const _cheerio = require('cheerio');
 const { LRUCache } = require('lru-cache');
 
 // Ensure environment variables are loaded
@@ -32,11 +32,11 @@ const octokit = new Octokit({
   auth: process.env.GITHUB_TOKEN,
   userAgent: 'FlowForge/1.0',
   throttle: {
-    onRateLimit: (retryAfter, options, octokit) => {
+    onRateLimit: (retryAfter, _options, _octokit) => {
       console.warn(`⚠️  Rate limit exceeded, retrying after ${retryAfter} seconds`);
       return true; // Enable automatic retries
     },
-    onAbuseLimit: (retryAfter, options, octokit) => {
+    onAbuseLimit: (retryAfter, _options, _octokit) => {
       console.warn(`⚠️  Abuse detection triggered, retrying after ${retryAfter} seconds`);
       return true; // Enable automatic retries
     }
@@ -524,26 +524,26 @@ function validateActionMetadata(metadata) {
     
     // Validate based on runs.using type
     switch (metadata.runs.using) {
-      case 'node12':
-      case 'node16':
-      case 'node20':
-        if (!metadata.runs.main) {
-          validation.errors.push('JavaScript actions require runs.main');
-          validation.isValid = false;
-        }
-        break;
-      case 'docker':
-        if (!metadata.runs.image) {
-          validation.errors.push('Docker actions require runs.image');
-          validation.isValid = false;
-        }
-        break;
-      case 'composite':
-        if (!metadata.runs.steps || !Array.isArray(metadata.runs.steps)) {
-          validation.errors.push('Composite actions require runs.steps array');
-          validation.isValid = false;
-        }
-        break;
+    case 'node12':
+    case 'node16':
+    case 'node20':
+      if (!metadata.runs.main) {
+        validation.errors.push('JavaScript actions require runs.main');
+        validation.isValid = false;
+      }
+      break;
+    case 'docker':
+      if (!metadata.runs.image) {
+        validation.errors.push('Docker actions require runs.image');
+        validation.isValid = false;
+      }
+      break;
+    case 'composite':
+      if (!metadata.runs.steps || !Array.isArray(metadata.runs.steps)) {
+        validation.errors.push('Composite actions require runs.steps array');
+        validation.isValid = false;
+      }
+      break;
     }
   }
   
@@ -579,22 +579,22 @@ function detectCompatibility(metadata) {
   
   if (metadata.runs) {
     switch (metadata.runs.using) {
-      case 'node12':
-        compatibility.nodeVersion = '12';
-        compatibility.minimumGitHubVersion = '2.285.0';
-        break;
-      case 'node16':
-        compatibility.nodeVersion = '16';
-        compatibility.minimumGitHubVersion = '2.285.0';
-        break;
-      case 'node20':
-        compatibility.nodeVersion = '20';
-        compatibility.minimumGitHubVersion = '2.308.0';
-        break;
-      case 'docker':
-        compatibility.dockerRequired = true;
-        compatibility.runners = ['ubuntu-latest']; // Docker actions only run on Linux
-        break;
+    case 'node12':
+      compatibility.nodeVersion = '12';
+      compatibility.minimumGitHubVersion = '2.285.0';
+      break;
+    case 'node16':
+      compatibility.nodeVersion = '16';
+      compatibility.minimumGitHubVersion = '2.285.0';
+      break;
+    case 'node20':
+      compatibility.nodeVersion = '20';
+      compatibility.minimumGitHubVersion = '2.308.0';
+      break;
+    case 'docker':
+      compatibility.dockerRequired = true;
+      compatibility.runners = ['ubuntu-latest']; // Docker actions only run on Linux
+      break;
     }
   }
   

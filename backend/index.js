@@ -22,7 +22,7 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const axios = require('axios');
+const _axios = require('axios');
 const yaml = require('js-yaml');
 const { Octokit } = require('@octokit/rest');
 const OpenAI = require('openai');
@@ -198,7 +198,7 @@ async function fetchAwesomeActions() {
     
     // Regular expression to match GitHub repository URLs
     // Updated to handle various edge cases and formats
-    const repoRegex = /https:\/\/github\.com\/([a-zA-Z0-9-]+\/[a-zA-Z0-9-_.]+)(?:[\/\s\)#]|$)/g;
+    const repoRegex = /https:\/\/github\.com\/([a-zA-Z0-9-]+\/[a-zA-Z0-9-_.]+)(?:[/\s)#]|$)/g;
     const matches = content.matchAll(repoRegex);
     
     const repositories = [];
@@ -470,7 +470,7 @@ Please ensure the workflow includes:
       ],
       temperature: 0.7,
       max_tokens: 2500,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' }
     });
 
     const content = response.choices[0].message.content;
@@ -530,7 +530,7 @@ async function validateWorkflow(yamlContent) {
     await fs.writeFile(tempFile, yamlContent);
     
     // Run actionlint
-    const { stdout, stderr } = await execAsync(`actionlint ${tempFile}`);
+    const { stdout: _stdout, stderr } = await execAsync(`actionlint ${tempFile}`);
     
     // Clean up temp file
     await fs.unlink(tempFile);
@@ -550,7 +550,9 @@ async function validateWorkflow(yamlContent) {
     // Clean up temp file on error
     try {
       await fs.unlink(tempFile);
-    } catch (e) {}
+    } catch (e) {
+      // Ignore file cleanup errors
+    }
     
     // Parse actionlint errors
     const errors = error.stdout ? error.stdout.split('\n').filter(line => line.trim()) : ['Unknown validation error'];
@@ -709,7 +711,7 @@ ${context ? `Additional context: ${context}` : ''}`;
       ],
       temperature: 0.7,
       max_tokens: 2000,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' }
     });
 
     const result = JSON.parse(response.choices[0].message.content);
@@ -810,7 +812,7 @@ app.post('/api/workflows/optimize', apiLimiter, async (req, res) => {
                 uses: 'actions/cache@v3',
                 with: {
                   path: '~/.npm',
-                  key: "${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}",
+                  key: '${{ runner.os }}-node-${{ hashFiles(\'**/package-lock.json\') }}',
                   'restore-keys': '${{ runner.os }}-node-'
                 }
               }
@@ -1090,7 +1092,7 @@ async function startServer() {
     console.log('Connected to MongoDB');
 
     // Only start server AFTER database is confirmed working
-    const server = app.listen(PORT, (err) => {
+    const _server = app.listen(PORT, (err) => {
       if (err) {
         console.error('Failed to start server:', err);
         process.exit(1);

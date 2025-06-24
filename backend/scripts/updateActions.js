@@ -97,7 +97,7 @@ async function updateActions() {
           updated++;
         } catch (error) {
           if (error.message.includes('API rate limit exceeded')) {
-            console.log(`⏳ Rate limit hit, waiting 60 seconds...`);
+            console.log('⏳ Rate limit hit, waiting 60 seconds...');
             await new Promise(resolve => setTimeout(resolve, 60000));
             // Retry this action
             try {

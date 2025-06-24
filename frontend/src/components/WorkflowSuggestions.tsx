@@ -20,7 +20,7 @@ interface WorkflowSuggestionsProps {
 
 export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
   nodes,
-  edges,
+  edges: _edges,
   onClose,
   onApplySuggestion
 }) => {
@@ -93,48 +93,48 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'performance':
-        return <TrendingUp className="w-4 h-4" />;
-      case 'security':
-        return <Shield className="w-4 h-4" />;
-      case 'cost':
-        return <DollarSign className="w-4 h-4" />;
-      case 'reliability':
-        return <Zap className="w-4 h-4" />;
-      case 'feature':
-        return <Package className="w-4 h-4" />;
-      default:
-        return <Lightbulb className="w-4 h-4" />;
+    case 'performance':
+      return <TrendingUp className="w-4 h-4" />;
+    case 'security':
+      return <Shield className="w-4 h-4" />;
+    case 'cost':
+      return <DollarSign className="w-4 h-4" />;
+    case 'reliability':
+      return <Zap className="w-4 h-4" />;
+    case 'feature':
+      return <Package className="w-4 h-4" />;
+    default:
+      return <Lightbulb className="w-4 h-4" />;
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'text-red-600 bg-red-50 border-red-200';
-      case 'medium':
-        return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-      case 'low':
-        return 'text-green-600 bg-green-50 border-green-200';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-200';
+    case 'high':
+      return 'text-red-600 bg-red-50 border-red-200';
+    case 'medium':
+      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    case 'low':
+      return 'text-green-600 bg-green-50 border-green-200';
+    default:
+      return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'performance':
-        return 'text-blue-600';
-      case 'security':
-        return 'text-purple-600';
-      case 'cost':
-        return 'text-green-600';
-      case 'reliability':
-        return 'text-orange-600';
-      case 'feature':
-        return 'text-indigo-600';
-      default:
-        return 'text-gray-600';
+    case 'performance':
+      return 'text-blue-600';
+    case 'security':
+      return 'text-purple-600';
+    case 'cost':
+      return 'text-green-600';
+    case 'reliability':
+      return 'text-orange-600';
+    case 'feature':
+      return 'text-indigo-600';
+    default:
+      return 'text-gray-600';
     }
   };
 
@@ -276,7 +276,7 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
           {!loading && suggestions.length === 0 && !error && (
             <div className="text-center py-12 text-gray-500">
               <Lightbulb className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>Click "Get Suggestions" to analyze your workflow</p>
+              <p>Click &quot;Get Suggestions&quot; to analyze your workflow</p>
               <p className="text-sm mt-1">Our AI will provide optimization recommendations</p>
             </div>
           )}

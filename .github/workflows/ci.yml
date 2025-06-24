@@ -16,16 +16,16 @@ on:
           - staging
           - production
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+  checks: write
+  pull-requests: write
+
 env:
   NODE_VERSION: '18.x'
   CACHE_VERSION: 'v1'
-
-permissions:
-  contents: read
-  security-events: write
-  actions: read
-  packages: write
-  pull-requests: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -483,7 +483,6 @@ jobs:
             🤖 Generated with [Claude Code](https://claude.ai/code)
           files: |
             frontend-build/**/*
-            backend-node-modules.tar.gz
           draft: false
           prerelease: false
           generate_release_notes: true

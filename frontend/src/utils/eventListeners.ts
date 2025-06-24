@@ -3,10 +3,10 @@
  */
 
 export function addPassiveEventListener(
-  element: HTMLElement | Window,
+  element: HTMLElement | typeof window,
   event: string,
-  handler: EventListener,
-  options?: AddEventListenerOptions
+  handler: (e: Event) => void,
+  options?: boolean | { capture?: boolean; once?: boolean; passive?: boolean }
 ): () => void {
   const passiveOptions = {
     ...options,

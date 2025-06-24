@@ -240,8 +240,22 @@ jobs:
           languages: javascript-typescript
           queries: security-extended
 
-      - name: 🔨 Autobuild
-        uses: github/codeql-action/autobuild@v3
+      - name: 🔨 Build for CodeQL Analysis
+        run: |
+          echo "📦 Installing backend dependencies..."
+          cd backend
+          npm ci --prefer-offline --no-audit
+          cd ..
+          
+          echo "📦 Installing frontend dependencies..."
+          cd frontend
+          npm ci --prefer-offline --no-audit
+          
+          echo "🏗️ Building frontend (TypeScript transpilation)..."
+          npm run build
+          cd ..
+          
+          echo "✅ Build complete for CodeQL analysis"
 
       - name: 🛡️ Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

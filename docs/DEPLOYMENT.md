@@ -1,12 +1,16 @@
 # FlowForge Deployment Guide
 
+## Current Status
+FlowForge v0.2.0 is ready for deployment with full AI integration and workflow persistence capabilities.
+
 ## Prerequisites
 
 - Docker and Docker Compose
 - Node.js 18+ (for local development)
 - MongoDB 4.4+ (if not using Docker)
-- GitHub Personal Access Token
-- OpenAI API Key
+- GitHub Personal Access Token (with repo scope)
+- OpenAI API Key (for AI features)
+- actionlint (for YAML validation)
 
 ## Environment Configuration
 
@@ -274,28 +278,33 @@ SESSION_SECRET=your-random-session-secret-here
    - Never commit `.env` files
    - Use secrets management (AWS Secrets Manager, HashiCorp Vault)
    - Rotate API keys regularly
+   - Minimum required scopes for GitHub token: `repo`, `read:org`
 
 3. **Network Security**
    - Configure firewall rules
    - Use VPC/private networks for database
-   - Implement API rate limiting
+   - API rate limiting configured (100 req/15min general, 20 req/15min for AI)
+   - CORS properly configured for production domain
 
 ### Performance
 
 1. **Caching**
-   - Enable Redis for session storage
+   - LRU cache implemented for GitHub API responses (6-hour TTL)
+   - Enable Redis for session storage (Phase 3)
    - Configure CDN for static assets
-   - Implement database query caching
+   - MongoDB indexes optimized for common queries
 
 2. **Scaling**
    - Horizontal scaling for API servers
-   - MongoDB replica sets
-   - Load balancer configuration
+   - MongoDB replica sets for high availability
+   - Load balancer with health checks
+   - Action discovery runs in batches to respect rate limits
 
 3. **Monitoring**
    - Application metrics (Prometheus)
    - Log aggregation (ELK stack)
    - Uptime monitoring (UptimeRobot)
+   - Performance metrics: <200ms API response, <2s AI generation
 
 ### Backup & Recovery
 

@@ -1,0 +1,731 @@
+# io.github.flowforge.FlowForge.yml
+# 
+# Flatpak manifest for FlowForge - GitHub Actions Workflow Builder
+# This manifest packages the complete FlowForge application including
+# the frontend, backend API, and embedded MongoDB database.
+#
+# Build instructions:
+# flatpak-builder --force-clean build-dir io.github.flowforge.FlowForge.yml
+# flatpak-builder --user --install --force-clean build-dir io.github.flowforge.FlowForge.yml
+#
+# Run:
+# flatpak run io.github.flowforge.FlowForge
+
+app-id: io.github.flowforge.FlowForge
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+command: flowforge-launcher
+
+# Finish args define sandbox permissions
+finish-args:
+  # Network access for API calls and web server
+  - --share=network
+  # Access to host files for workflow export
+  - --filesystem=home
+  # GPU acceleration for web rendering
+  - --device=dri
+  # Audio for potential notifications
+  - --socket=pulseaudio
+  # X11 + XShm access for Electron
+  - --socket=x11
+  - --share=ipc
+  # Wayland access
+  - --socket=wayland
+  # Allow opening external URLs
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.FileChooser
+  - --talk-name=org.freedesktop.Notifications
+  # Environment variables
+  - --env=ELECTRON_TRASH=gio
+  - --env=NODE_ENV=production
+
+modules:
+  # MongoDB module - embedded database
+  - name: mongodb
+    buildsystem: simple
+    build-commands:
+      # Download and extract MongoDB binaries
+      - |
+        case $(uname -m) in
+          x86_64)
+            curl -L https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu2204-7.0.5.tgz | tar xz
+            cp mongodb-linux-x86_64-ubuntu2204-7.0.5/bin/* /app/bin/
+            ;;
+          aarch64)
+            curl -L https://fastdl.mongodb.org/linux/mongodb-linux-aarch64-ubuntu2204-7.0.5.tgz | tar xz
+            cp mongodb-linux-aarch64-ubuntu2204-7.0.5/bin/* /app/bin/
+            ;;
+        esac
+      - mkdir -p /app/share/mongodb
+    sources: []
+
+  # Node.js modules and dependencies
+  - name: node-modules
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/node18/install.sh
+    cleanup:
+      - /usr/lib/sdk/node18/lib/node_modules/npm
+    sources: []
+
+  # FlowForge Backend
+  - name: flowforge-backend
+    buildsystem: simple
+    build-options:
+      env:
+        npm_config_offline: 'true'
+        npm_config_cache: flatpak-node/npm-cache
+        NPM_CONFIG_LOGLEVEL: info
+    build-commands:
+      # Install backend dependencies
+      - npm install --offline --verbose --prefix=backend
+      # Install actionlint for workflow validation
+      - |
+        case $(uname -m) in
+          x86_64)
+            curl -L https://github.com/rhysd/actionlint/releases/download/v1.6.26/actionlint_1.6.26_linux_amd64.tar.gz | tar xz
+            ;;
+          aarch64)
+            curl -L https://github.com/rhysd/actionlint/releases/download/v1.6.26/actionlint_1.6.26_linux_arm64.tar.gz | tar xz
+            ;;
+        esac
+      - install -Dm755 actionlint /app/bin/actionlint
+      # Copy backend to app directory
+      - cp -r backend /app/flowforge-backend
+      # Create data directories
+      - mkdir -p /app/share/flowforge/data
+    sources:
+      - type: dir
+        path: backend
+        dest: backend
+      - generated-sources-backend.json
+
+  # FlowForge Frontend
+  - name: flowforge-frontend
+    buildsystem: simple
+    build-options:
+      env:
+        npm_config_offline: 'true'
+        npm_config_cache: flatpak-node/npm-cache
+        VITE_API_URL: 'http://localhost:3001'
+    build-commands:
+      # Install frontend dependencies
+      - npm install --offline --verbose --prefix=frontend
+      # Build production frontend
+      - npm run build --prefix=frontend
+      # Copy built frontend to app directory
+      - cp -r frontend/dist /app/flowforge-frontend
+    sources:
+      - type: dir
+        path: frontend
+        dest: frontend
+      - generated-sources-frontend.json
+
+  # Electron wrapper for FlowForge
+  - name: flowforge-electron
+    buildsystem: simple
+    build-options:
+      env:
+        npm_config_offline: 'true'
+        npm_config_cache: flatpak-node/npm-cache
+    build-commands:
+      # Create Electron main process file
+      - |
+        cat > main.js << 'EOF'
+        const { app, BrowserWindow, Menu, shell, dialog, ipcMain } = require('electron');
+        const path = require('path');
+        const { spawn } = require('child_process');
+        const fs = require('fs');
+        const os = require('os');
+
+        // Keep references to avoid garbage collection
+        let mainWindow;
+        let backendProcess;
+        let mongoProcess;
+
+        // Paths
+        const userDataPath = app.getPath('userData');
+        const mongoDataPath = path.join(userDataPath, 'mongodb');
+        const logsPath = path.join(userDataPath, 'logs');
+
+        // Ensure directories exist
+        function ensureDirectories() {
+          [mongoDataPath, logsPath].forEach(dir => {
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+          });
+        }
+
+        // Start MongoDB
+        function startMongoDB() {
+          return new Promise((resolve, reject) => {
+            console.log('Starting MongoDB...');
+            
+            mongoProcess = spawn('/app/bin/mongod', [
+              '--dbpath', mongoDataPath,
+              '--port', '27017',
+              '--nojournal',
+              '--quiet'
+            ], {
+              stdio: ['ignore', 'pipe', 'pipe']
+            });
+
+            mongoProcess.stdout.on('data', (data) => {
+              console.log(`MongoDB: ${data}`);
+              if (data.toString().includes('Waiting for connections')) {
+                resolve();
+              }
+            });
+
+            mongoProcess.stderr.on('data', (data) => {
+              console.error(`MongoDB Error: ${data}`);
+            });
+
+            mongoProcess.on('error', (error) => {
+              console.error('Failed to start MongoDB:', error);
+              reject(error);
+            });
+
+            // Give MongoDB time to start
+            setTimeout(resolve, 3000);
+          });
+        }
+
+        // Start Backend API
+        function startBackend() {
+          return new Promise((resolve, reject) => {
+            console.log('Starting FlowForge Backend...');
+            
+            const env = {
+              ...process.env,
+              NODE_ENV: 'production',
+              PORT: '3001',
+              MONGODB_URI: 'mongodb://localhost:27017/flowforge',
+              FRONTEND_URL: 'http://localhost:8080'
+            };
+
+            backendProcess = spawn('node', ['/app/flowforge-backend/index.js'], {
+              env,
+              stdio: ['ignore', 'pipe', 'pipe'],
+              cwd: '/app/flowforge-backend'
+            });
+
+            backendProcess.stdout.on('data', (data) => {
+              console.log(`Backend: ${data}`);
+              if (data.toString().includes('server running on port')) {
+                resolve();
+              }
+            });
+
+            backendProcess.stderr.on('data', (data) => {
+              console.error(`Backend Error: ${data}`);
+            });
+
+            backendProcess.on('error', (error) => {
+              console.error('Failed to start backend:', error);
+              reject(error);
+            });
+
+            // Give backend time to start
+            setTimeout(resolve, 5000);
+          });
+        }
+
+        // Create application menu
+        function createMenu() {
+          const template = [
+            {
+              label: 'File',
+              submenu: [
+                {
+                  label: 'New Workflow',
+                  accelerator: 'CmdOrCtrl+N',
+                  click: () => {
+                    mainWindow.webContents.send('new-workflow');
+                  }
+                },
+                {
+                  label: 'Open Workflow',
+                  accelerator: 'CmdOrCtrl+O',
+                  click: () => {
+                    dialog.showOpenDialog(mainWindow, {
+                      properties: ['openFile'],
+                      filters: [
+                        { name: 'YAML Files', extensions: ['yml', 'yaml'] },
+                        { name: 'All Files', extensions: ['*'] }
+                      ]
+                    }).then(result => {
+                      if (!result.canceled) {
+                        mainWindow.webContents.send('open-workflow', result.filePaths[0]);
+                      }
+                    });
+                  }
+                },
+                {
+                  label: 'Save Workflow',
+                  accelerator: 'CmdOrCtrl+S',
+                  click: () => {
+                    mainWindow.webContents.send('save-workflow');
+                  }
+                },
+                { type: 'separator' },
+                {
+                  label: 'Export YAML',
+                  accelerator: 'CmdOrCtrl+E',
+                  click: () => {
+                    mainWindow.webContents.send('export-yaml');
+                  }
+                },
+                { type: 'separator' },
+                {
+                  label: 'Quit',
+                  accelerator: 'CmdOrCtrl+Q',
+                  click: () => {
+                    app.quit();
+                  }
+                }
+              ]
+            },
+            {
+              label: 'Edit',
+              submenu: [
+                { label: 'Undo', accelerator: 'CmdOrCtrl+Z', role: 'undo' },
+                { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', role: 'redo' },
+                { type: 'separator' },
+                { label: 'Cut', accelerator: 'CmdOrCtrl+X', role: 'cut' },
+                { label: 'Copy', accelerator: 'CmdOrCtrl+C', role: 'copy' },
+                { label: 'Paste', accelerator: 'CmdOrCtrl+V', role: 'paste' }
+              ]
+            },
+            {
+              label: 'View',
+              submenu: [
+                { label: 'Reload', accelerator: 'CmdOrCtrl+R', role: 'reload' },
+                { label: 'Force Reload', accelerator: 'CmdOrCtrl+Shift+R', role: 'forceReload' },
+                { label: 'Toggle DevTools', accelerator: 'F12', role: 'toggleDevTools' },
+                { type: 'separator' },
+                { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', role: 'resetZoom' },
+                { label: 'Zoom In', accelerator: 'CmdOrCtrl+Plus', role: 'zoomIn' },
+                { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', role: 'zoomOut' },
+                { type: 'separator' },
+                { label: 'Toggle Fullscreen', accelerator: 'F11', role: 'togglefullscreen' }
+              ]
+            },
+            {
+              label: 'Help',
+              submenu: [
+                {
+                  label: 'Documentation',
+                  click: () => {
+                    shell.openExternal('https://github.com/flowforge/flowforge/wiki');
+                  }
+                },
+                {
+                  label: 'GitHub Repository',
+                  click: () => {
+                    shell.openExternal('https://github.com/flowforge/flowforge');
+                  }
+                },
+                { type: 'separator' },
+                {
+                  label: 'About FlowForge',
+                  click: () => {
+                    dialog.showMessageBox(mainWindow, {
+                      type: 'info',
+                      title: 'About FlowForge',
+                      message: 'FlowForge',
+                      detail: 'Visual GitHub Actions Workflow Builder\\n\\nVersion: 1.0.0\\n\\nBuild powerful CI/CD pipelines with drag-and-drop simplicity and AI assistance.',
+                      buttons: ['OK']
+                    });
+                  }
+                }
+              ]
+            }
+          ];
+
+          const menu = Menu.buildFromTemplate(template);
+          Menu.setApplicationMenu(menu);
+        }
+
+        // Create main window
+        function createWindow() {
+          mainWindow = new BrowserWindow({
+            width: 1400,
+            height: 900,
+            minWidth: 1200,
+            minHeight: 700,
+            webPreferences: {
+              nodeIntegration: false,
+              contextIsolation: true,
+              preload: path.join(__dirname, 'preload.js')
+            },
+            icon: path.join(__dirname, 'icon.png'),
+            title: 'FlowForge - GitHub Actions Workflow Builder'
+          });
+
+          // Start with loading screen
+          mainWindow.loadFile(path.join(__dirname, 'loading.html'));
+
+          mainWindow.on('closed', () => {
+            mainWindow = null;
+          });
+        }
+
+        // Initialize application
+        async function initialize() {
+          try {
+            ensureDirectories();
+            
+            // Start services
+            await startMongoDB();
+            await startBackend();
+            
+            // Load the frontend
+            if (mainWindow) {
+              mainWindow.loadFile('/app/flowforge-frontend/index.html');
+            }
+          } catch (error) {
+            console.error('Initialization failed:', error);
+            dialog.showErrorBox('Startup Error', 
+              'Failed to start FlowForge services. Please check the logs.');
+            app.quit();
+          }
+        }
+
+        // App event handlers
+        app.whenReady().then(() => {
+          createWindow();
+          createMenu();
+          initialize();
+        });
+
+        app.on('window-all-closed', () => {
+          if (process.platform !== 'darwin') {
+            app.quit();
+          }
+        });
+
+        app.on('activate', () => {
+          if (BrowserWindow.getAllWindows().length === 0) {
+            createWindow();
+          }
+        });
+
+        // Cleanup on exit
+        app.on('before-quit', () => {
+          if (backendProcess) {
+            backendProcess.kill();
+          }
+          if (mongoProcess) {
+            mongoProcess.kill();
+          }
+        });
+
+        // IPC handlers for saving workflows
+        ipcMain.handle('save-workflow-dialog', async (event, yamlContent) => {
+          const result = await dialog.showSaveDialog(mainWindow, {
+            filters: [
+              { name: 'YAML Files', extensions: ['yml', 'yaml'] },
+              { name: 'All Files', extensions: ['*'] }
+            ],
+            defaultPath: 'workflow.yml'
+          });
+          
+          if (!result.canceled) {
+            await fs.promises.writeFile(result.filePath, yamlContent);
+            return result.filePath;
+          }
+          return null;
+        });
+        EOF
+
+      # Create preload script
+      - |
+        cat > preload.js << 'EOF'
+        const { contextBridge, ipcRenderer } = require('electron');
+
+        contextBridge.exposeInMainWorld('electronAPI', {
+          saveWorkflow: (yamlContent) => ipcRenderer.invoke('save-workflow-dialog', yamlContent),
+          onNewWorkflow: (callback) => ipcRenderer.on('new-workflow', callback),
+          onOpenWorkflow: (callback) => ipcRenderer.on('open-workflow', callback),
+          onSaveWorkflow: (callback) => ipcRenderer.on('save-workflow', callback),
+          onExportYaml: (callback) => ipcRenderer.on('export-yaml', callback)
+        });
+        EOF
+
+      # Create loading screen
+      - |
+        cat > loading.html << 'EOF'
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>FlowForge - Loading</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 0;
+              height: 100vh;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              color: white;
+            }
+            .container {
+              text-align: center;
+            }
+            .logo {
+              width: 120px;
+              height: 120px;
+              margin-bottom: 30px;
+              animation: pulse 2s ease-in-out infinite;
+            }
+            @keyframes pulse {
+              0% { transform: scale(1); }
+              50% { transform: scale(1.05); }
+              100% { transform: scale(1); }
+            }
+            h1 {
+              font-size: 2.5em;
+              margin: 0 0 10px 0;
+              font-weight: 600;
+            }
+            p {
+              font-size: 1.2em;
+              opacity: 0.9;
+              margin: 0 0 30px 0;
+            }
+            .spinner {
+              width: 50px;
+              height: 50px;
+              border: 3px solid rgba(255, 255, 255, 0.3);
+              border-radius: 50%;
+              border-top-color: white;
+              animation: spin 1s ease-in-out infinite;
+              margin: 0 auto;
+            }
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+            .status {
+              margin-top: 20px;
+              font-size: 0.9em;
+              opacity: 0.7;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <svg class="logo" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 10V3L4 14h7v7l9-11h-7z" fill="white"/>
+            </svg>
+            <h1>FlowForge</h1>
+            <p>Visual GitHub Actions Workflow Builder</p>
+            <div class="spinner"></div>
+            <div class="status">Starting services...</div>
+          </div>
+        </body>
+        </html>
+        EOF
+
+      # Create package.json for Electron
+      - |
+        cat > package.json << 'EOF'
+        {
+          "name": "flowforge",
+          "version": "1.0.0",
+          "description": "Visual GitHub Actions Workflow Builder",
+          "main": "main.js",
+          "scripts": {
+            "start": "electron ."
+          },
+          "dependencies": {
+            "electron": "^28.1.0"
+          }
+        }
+        EOF
+
+      # Install Electron
+      - npm install --offline --verbose
+      # Copy Electron files to app directory
+      - cp -r * /app/flowforge-electron/
+    sources:
+      - type: file
+        path: flowforge-electron-sources.json
+        dest-filename: generated-sources-electron.json
+
+  # Launcher script
+  - name: flowforge-launcher
+    buildsystem: simple
+    build-commands:
+      - |
+        cat > flowforge-launcher << 'EOF'
+        #!/bin/bash
+        cd /app/flowforge-electron
+        exec electron .
+        EOF
+      - install -Dm755 flowforge-launcher /app/bin/flowforge-launcher
+
+  # Desktop integration
+  - name: desktop-integration
+    buildsystem: simple
+    build-commands:
+      # Desktop file
+      - |
+        cat > io.github.flowforge.FlowForge.desktop << 'EOF'
+        [Desktop Entry]
+        Name=FlowForge
+        Comment=Visual GitHub Actions Workflow Builder
+        GenericName=Workflow Builder
+        Exec=flowforge-launcher
+        Icon=io.github.flowforge.FlowForge
+        Terminal=false
+        Type=Application
+        Categories=Development;IDE;
+        Keywords=github;actions;workflow;ci;cd;automation;
+        StartupNotify=true
+        StartupWMClass=FlowForge
+        MimeType=text/x-yaml;application/x-yaml;
+        EOF
+      - install -Dm644 io.github.flowforge.FlowForge.desktop /app/share/applications/io.github.flowforge.FlowForge.desktop
+      
+      # AppStream metadata
+      - |
+        cat > io.github.flowforge.FlowForge.metainfo.xml << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <component type="desktop-application">
+          <id>io.github.flowforge.FlowForge</id>
+          <metadata_license>CC0-1.0</metadata_license>
+          <project_license>MIT</project_license>
+          <name>FlowForge</name>
+          <summary>Visual GitHub Actions Workflow Builder</summary>
+          <description>
+            <p>
+              FlowForge is a powerful visual workflow builder for GitHub Actions that combines 
+              an intuitive drag-and-drop interface with AI-powered assistance. Build, visualize, 
+              and optimize CI/CD pipelines without wrestling with YAML syntax.
+            </p>
+            <p>Features:</p>
+            <ul>
+              <li>Visual drag-and-drop workflow designer</li>
+              <li>AI-powered natural language workflow generation</li>
+              <li>500+ GitHub Actions from Awesome Actions repository</li>
+              <li>Real-time YAML validation and preview</li>
+              <li>Pre-built workflow templates</li>
+              <li>Workflow optimization suggestions</li>
+              <li>Export to GitHub-ready YAML files</li>
+            </ul>
+          </description>
+          <screenshots>
+            <screenshot type="default">
+              <caption>Main workflow builder interface</caption>
+              <image>https://raw.githubusercontent.com/flowforge/flowforge/main/screenshots/main.png</image>
+            </screenshot>
+            <screenshot>
+              <caption>AI Assistant generating workflows</caption>
+              <image>https://raw.githubusercontent.com/flowforge/flowforge/main/screenshots/ai-assistant.png</image>
+            </screenshot>
+            <screenshot>
+              <caption>YAML preview and validation</caption>
+              <image>https://raw.githubusercontent.com/flowforge/flowforge/main/screenshots/yaml-preview.png</image>
+            </screenshot>
+          </screenshots>
+          <url type="homepage">https://flowforge.dev</url>
+          <url type="bugtracker">https://github.com/flowforge/flowforge/issues</url>
+          <url type="help">https://github.com/flowforge/flowforge/wiki</url>
+          <update_contact>support@flowforge.dev</update_contact>
+          <developer_name>FlowForge Team</developer_name>
+          <releases>
+            <release version="1.0.0" date="2024-01-15">
+              <description>
+                <p>Initial release of FlowForge with core features:</p>
+                <ul>
+                  <li>Visual workflow builder with React Flow</li>
+                  <li>AI integration for natural language workflow creation</li>
+                  <li>Action discovery from Awesome Actions</li>
+                  <li>YAML generation and validation</li>
+                  <li>Workflow templates library</li>
+                </ul>
+              </description>
+            </release>
+          </releases>
+          <content_rating type="oars-1.1">
+            <content_attribute id="violence-cartoon">none</content_attribute>
+            <content_attribute id="violence-fantasy">none</content_attribute>
+            <content_attribute id="violence-realistic">none</content_attribute>
+            <content_attribute id="violence-bloodshed">none</content_attribute>
+            <content_attribute id="violence-sexual">none</content_attribute>
+            <content_attribute id="violence-desecration">none</content_attribute>
+            <content_attribute id="violence-slavery">none</content_attribute>
+            <content_attribute id="violence-worship">none</content_attribute>
+            <content_attribute id="drugs-alcohol">none</content_attribute>
+            <content_attribute id="drugs-narcotics">none</content_attribute>
+            <content_attribute id="drugs-tobacco">none</content_attribute>
+            <content_attribute id="sex-nudity">none</content_attribute>
+            <content_attribute id="sex-themes">none</content_attribute>
+            <content_attribute id="sex-homosexuality">none</content_attribute>
+            <content_attribute id="sex-prostitution">none</content_attribute>
+            <content_attribute id="sex-adultery">none</content_attribute>
+            <content_attribute id="sex-appearance">none</content_attribute>
+            <content_attribute id="language-profanity">none</content_attribute>
+            <content_attribute id="language-humor">none</content_attribute>
+            <content_attribute id="language-discrimination">none</content_attribute>
+            <content_attribute id="social-chat">none</content_attribute>
+            <content_attribute id="social-info">none</content_attribute>
+            <content_attribute id="social-audio">none</content_attribute>
+            <content_attribute id="social-location">none</content_attribute>
+            <content_attribute id="social-contacts">none</content_attribute>
+            <content_attribute id="money-purchasing">none</content_attribute>
+            <content_attribute id="money-gambling">none</content_attribute>
+          </content_rating>
+        </component>
+        EOF
+      - install -Dm644 io.github.flowforge.FlowForge.metainfo.xml /app/share/metainfo/io.github.flowforge.FlowForge.metainfo.xml
+      
+      # Icons (create SVG icon)
+      - |
+        cat > icon.svg << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="128" height="128" rx="24" fill="url(#gradient)"/>
+          <path d="M74 52V28L32 74h21v24l42-46H74z" fill="white"/>
+          <defs>
+            <linearGradient id="gradient" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#667EEA"/>
+              <stop offset="1" stop-color="#764BA2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        EOF
+      - install -Dm644 icon.svg /app/share/icons/hicolor/scalable/apps/io.github.flowforge.FlowForge.svg
+      - rsvg-convert -w 16 -h 16 icon.svg -o icon-16.png
+      - rsvg-convert -w 32 -h 32 icon.svg -o icon-32.png
+      - rsvg-convert -w 64 -h 64 icon.svg -o icon-64.png
+      - rsvg-convert -w 128 -h 128 icon.svg -o icon-128.png
+      - rsvg-convert -w 256 -h 256 icon.svg -o icon-256.png
+      - install -Dm644 icon-16.png /app/share/icons/hicolor/16x16/apps/io.github.flowforge.FlowForge.png
+      - install -Dm644 icon-32.png /app/share/icons/hicolor/32x32/apps/io.github.flowforge.FlowForge.png
+      - install -Dm644 icon-64.png /app/share/icons/hicolor/64x64/apps/io.github.flowforge.FlowForge.png
+      - install -Dm644 icon-128.png /app/share/icons/hicolor/128x128/apps/io.github.flowforge.FlowForge.png
+      - install -Dm644 icon-256.png /app/share/icons/hicolor/256x256/apps/io.github.flowforge.FlowForge.png
+      - cp icon-256.png /app/flowforge-electron/icon.png
+
+# Cleanup rules to reduce package size
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /man
+  - /share/doc
+  - /share/gtk-doc
+  - /share/man
+  - /share/pkgconfig
+  - '*.la'
+  - '*.a'

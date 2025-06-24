@@ -9,6 +9,7 @@ FlowForge is a Visual GitHub Actions Workflow Builder - a full-stack web applica
 ## Development Commands
 
 ### Backend Development (from `backend/` directory)
+
 ```bash
 npm run dev          # Start development server with hot reload (nodemon)
 npm run seed         # Seed database with initial workflow templates
@@ -18,6 +19,7 @@ npm run lint         # Run ESLint
 ```
 
 ### Frontend Development (from `frontend/` directory)
+
 ```bash
 npm run dev          # Start Vite dev server (http://localhost:5173)
 npm run build        # Build for production (outputs to dist/)
@@ -26,11 +28,13 @@ npm run lint         # Run ESLint on src files
 ```
 
 ### Running Tests
+
 - **Backend**: `npm test` runs Jest tests with environment variable loading
 - **Frontend**: `npm test` runs Vitest for React component and unit tests
 - **Single test**: Use `.only` or `--testNamePattern` with Jest/Vitest
 
 ### Full Stack Development
+
 ```bash
 # Terminal 1: MongoDB (if not using Docker)
 mongod --dbpath /path/to/data
@@ -48,6 +52,7 @@ docker-compose up -d
 ## High-Level Architecture
 
 ### Frontend Architecture
+
 - **Framework**: React 18 with TypeScript, built with Vite
 - **Visual Editor**: React Flow library for drag-and-drop workflow building
 - **State Management**: Local state with React hooks, Zustand prepared for global state
@@ -58,6 +63,7 @@ docker-compose up -d
   - YAML Preview: Real-time workflow YAML with syntax highlighting
 
 ### Backend Architecture
+
 - **Framework**: Express.js with modular route structure
 - **Database**: MongoDB with Mongoose ODM
 - **External Services**:
@@ -70,7 +76,7 @@ docker-compose up -d
 
 1. **API Communication**: RESTful endpoints under `/api/*` with Axios frontend client
 2. **Action Discovery**: Intelligent categorization using keywords and metadata parsing
-3. **AI Workflow Generation**: 
+3. **AI Workflow Generation**:
    - POST `/api/ai/generate-workflow` with natural language prompt
    - Returns structured workflow with explanations
 4. **Validation Pipeline**: Frontend YAML → Backend → actionlint → Error feedback
@@ -78,16 +84,19 @@ docker-compose up -d
 ### Database Models
 
 **Action Schema** (`backend/models/Action.js`):
+
 - Stores GitHub Action metadata with normalized structure
 - Tracks usage statistics and last update time
 
 **WorkflowTemplate Schema** (`backend/models/WorkflowTemplate.js`):
+
 - Pre-built workflow templates categorized by technology
 - Includes workflow content and metadata
 
 ### Environment Configuration
 
 Required environment variables (create `.env` from `.env.example`):
+
 ```bash
 MONGODB_URI=mongodb://localhost:27017/flowforge
 GITHUB_TOKEN=your_github_personal_access_token  # For API access
@@ -115,6 +124,7 @@ FRONTEND_URL=http://localhost:5173              # For CORS
 ### Docker Development
 
 The project includes Docker configuration for containerized development:
+
 - `docker-compose.yml` orchestrates MongoDB, backend, and frontend containers
 - Frontend served via Nginx in production mode
 - Volumes mounted for development hot-reload

@@ -46,6 +46,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 ## Code Style
 
 ### JavaScript/TypeScript
+
 - 2 spaces for indentation
 - Use semicolons
 - Use `const` and `let`, avoid `var`
@@ -53,12 +54,14 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - Use meaningful variable names
 
 ### React
+
 - Use functional components with hooks
 - Use TypeScript for type safety
 - Keep components small and focused
 - Use proper prop types
 
 ### Git Commit Messages
+
 - Use the present tense ("Add feature" not "Added feature")
 - Use the imperative mood ("Move cursor to..." not "Moves cursor to...")
 - Limit the first line to 72 characters or less
@@ -72,12 +75,14 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
    - Git
 
 2. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/flowforge.git
    cd flowforge
    ```
 
 3. **Install dependencies**
+
    ```bash
    # Backend
    cd backend
@@ -89,12 +94,14 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
    ```
 
 4. **Set up environment**
+
    ```bash
    cp .env.example .env
    # Add your API keys
    ```
 
 5. **Run tests**
+
    ```bash
    # Backend tests
    cd backend
@@ -110,6 +117,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 All submissions require review. We use GitHub pull requests for this purpose. Consult [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more information on using pull requests.
 
 ### Review Criteria
+
 - Code quality and readability
 - Test coverage
 - Documentation updates

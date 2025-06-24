@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -13,7 +13,10 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Search, Zap, Save, FileCode, Bot, ChevronRight, X, Settings } from 'lucide-react';
+import { Search, Zap, Save, FileCode, Bot, ChevronRight, X, Settings, Loader2, Lightbulb } from 'lucide-react';
+import { apiService } from './services/api';
+import { WorkflowManager } from './components/WorkflowManager';
+import { WorkflowSuggestions } from './components/WorkflowSuggestions';
 
 /**
  * FlowForge - GitHub Actions Workflow Builder
@@ -81,8 +84,8 @@ const nodeTypes = {
   action: ActionNode,
 };
 
-// Sample actions data (in production, this would come from the backend)
-const sampleActions: ActionMetadata[] = [
+// Initial sample actions data
+const initialActions: ActionMetadata[] = [
   {
     id: '1',
     name: 'Checkout',
@@ -149,6 +152,49 @@ const FlowForge = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+  
+  // API state
+  const [actions, setActions] = useState<ActionMetadata[]>(initialActions);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [showWorkflowManager, setShowWorkflowManager] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fetch actions from backend on mount
+  useEffect(() => {
+    const fetchActions = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getActions();
+        if (response.data.actions && response.data.actions.length > 0) {
+          setActions(response.data.actions);
+        }
+      } catch (err) {
+        console.error('Failed to fetch actions:', err);
+        // Keep using initial actions if API fails
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActions();
+  }, []);
+
+  // Fetch templates
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await apiService.getTemplates();
+        setTemplates(response.data.templates || []);
+      } catch (err) {
+        console.error('Failed to fetch templates:', err);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
 
   // Handle connection between nodes
   const onConnect = useCallback(
@@ -236,29 +282,87 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
   };
 
   // Handle AI prompt submission
-  const handleAiPrompt = () => {
-    // In production, this would call the backend API
-    console.log('AI Prompt:', aiPrompt);
-    // Simulate AI response by adding suggested actions
-    if (aiPrompt.toLowerCase().includes('deploy') && aiPrompt.toLowerCase().includes('static')) {
-      // Add checkout, setup-node, build, and deploy actions
-      const suggestedNodes = [
-        { ...sampleActions[0], position: { x: 100, y: 100 } },
-        { ...sampleActions[1], position: { x: 100, y: 200 } },
-        { ...sampleActions[2], position: { x: 100, y: 300 } },
-        { ...sampleActions[3], position: { x: 100, y: 400 } },
-      ];
+  const handleAiPrompt = async () => {
+    if (!aiPrompt.trim()) return;
+    
+    try {
+      setAiLoading(true);
+      setError(null);
       
-      // Add nodes and edges for the suggested workflow
-      // This is simplified - in production, this would be more sophisticated
+      const response = await apiService.generateWorkflow(aiPrompt);
+      const generatedWorkflow = response.data;
+      
+      if (generatedWorkflow.workflow && generatedWorkflow.workflow.jobs) {
+        // Clear existing nodes and edges
+        setNodes([]);
+        setEdges([]);
+        
+        // Parse the generated workflow and create nodes
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        let yPosition = 100;
+        
+        Object.entries(generatedWorkflow.workflow.jobs).forEach(([ jobName, job]: [string, any]) => {
+          if (job.steps) {
+            job.steps.forEach((step: any, index: number) => {
+              const nodeId = `${jobName}-${index}`;
+              const actionData = step.uses ? 
+                actions.find(a => a.repository.includes(step.uses.split('@')[0])) : null;
+              
+              newNodes.push({
+                id: nodeId,
+                type: 'action',
+                position: { x: 250, y: yPosition },
+                data: {
+                  name: step.name || actionData?.name || 'Run Command',
+                  description: actionData?.description || '',
+                  repository: step.uses || 'run',
+                  category: actionData?.category || 'other',
+                  inputs: step.with || {}
+                }
+              });
+              
+              // Create edge to previous node
+              if (index > 0) {
+                newEdges.push({
+                  id: `e${jobName}-${index-1}-${index}`,
+                  source: `${jobName}-${index-1}`,
+                  target: nodeId,
+                });
+              }
+              
+              yPosition += 120;
+            });
+          }
+        });
+        
+        setNodes(newNodes);
+        setEdges(newEdges);
+        
+        // Show success message
+        if (generatedWorkflow.explanation) {
+          alert(`Workflow generated!\n\n${generatedWorkflow.explanation}`);
+        }
+      }
+    } catch (err: any) {
+      console.error('AI generation failed:', err);
+      setError(err.response?.data?.error || 'Failed to generate workflow. Please try again.');
+    } finally {
+      setAiLoading(false);
     }
   };
 
   // Filter actions based on search
-  const filteredActions = sampleActions.filter(action =>
+  const filteredActions = actions.filter(action =>
     action.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     action.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle loading a workflow
+  const handleLoadWorkflow = (loadedNodes: any[], loadedEdges: any[]) => {
+    setNodes(loadedNodes);
+    setEdges(loadedEdges);
+  };
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -279,6 +383,11 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
             <Bot className="w-4 h-4 text-purple-500" />
             <h2 className="font-semibold text-gray-700">AI Assistant</h2>
           </div>
+          {error && (
+            <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-600">
+              {error}
+            </div>
+          )}
           <div className="flex gap-2">
             <input
               type="text"
@@ -290,9 +399,14 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
             />
             <button
               onClick={handleAiPrompt}
-              className="px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors"
+              disabled={aiLoading}
+              className="px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ChevronRight className="w-4 h-4" />
+              {aiLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -314,6 +428,11 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
         {/* Actions List */}
         <div className="flex-1 overflow-y-auto p-4">
           <h3 className="font-semibold text-gray-700 mb-3">Available Actions</h3>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+            </div>
+          ) : (
           <div className="space-y-2">
             {filteredActions.map((action) => (
               <div
@@ -338,6 +457,7 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
               </div>
             ))}
           </div>
+          )}
         </div>
       </div>
 
@@ -371,9 +491,19 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
                   <FileCode className="w-4 h-4" />
                   {showYaml ? 'Hide' : 'Show'} YAML
                 </button>
-                <button className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-2">
+                <button 
+                  onClick={() => setShowWorkflowManager(true)}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-2"
+                >
                   <Save className="w-4 h-4" />
                   Save Workflow
+                </button>
+                <button 
+                  onClick={() => setShowSuggestions(true)}
+                  className="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors flex items-center gap-2"
+                >
+                  <Lightbulb className="w-4 h-4" />
+                  Get Suggestions
                 </button>
               </Panel>
             </ReactFlow>
@@ -432,6 +562,25 @@ ${JSON.stringify(workflow, null, 2).replace(/"/g, '').replace(/,\n/g, '\n')}`;
           </div>
         )}
       </div>
+
+      {/* Workflow Manager Modal */}
+      {showWorkflowManager && (
+        <WorkflowManager
+          nodes={nodes}
+          edges={edges}
+          onLoadWorkflow={handleLoadWorkflow}
+          onClose={() => setShowWorkflowManager(false)}
+        />
+      )}
+
+      {/* Workflow Suggestions Modal */}
+      {showSuggestions && (
+        <WorkflowSuggestions
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setShowSuggestions(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,10 +1,11 @@
+<!-- markdownlint-disable MD033 -->
 # FlowForge
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
-  <img src="https://img.shields.io/badge/status-alpha-orange.svg" alt="Status">
+  <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status">
 </p>
 
 FlowForge is a powerful visual workflow builder for GitHub Actions that combines drag-and-drop simplicity with AI-powered assistance. Create complex CI/CD pipelines without writing YAML by hand.
@@ -12,12 +13,15 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 ## ✨ Features
 
 - 🎨 **Visual Workflow Builder** - Intuitive drag-and-drop interface powered by React Flow
-- 🤖 **AI-Powered Generation** - Natural language to workflow conversion using OpenAI
-- 📚 **Action Discovery** - Browse and search 500+ GitHub Actions from Awesome Actions
+- 🤖 **AI-Powered Generation** - Natural language to workflow conversion using OpenAI GPT-4
+- 📚 **Action Discovery** - Browse and search 500+ GitHub Actions with intelligent categorization
 - ✅ **Real-time Validation** - Instant YAML validation with actionlint
-- 🚀 **Smart Optimization** - Get suggestions for faster, more efficient workflows
+- 🚀 **Smart Optimization** - AI-powered suggestions for faster, more efficient workflows
 - 📝 **Template Library** - Pre-built workflows for common scenarios
-- 🔍 **Live YAML Preview** - See generated YAML in real-time
+- 🔍 **Live YAML Preview** - See generated YAML in real-time with syntax highlighting
+- 💾 **Workflow Persistence** - Save and load workflows from MongoDB
+- 🏷️ **Advanced Categorization** - 14 intelligent categories for easy action discovery
+- 🔄 **Full CRUD Operations** - Create, read, update, and delete workflows
 
 ## 🚀 Quick Start
 
@@ -32,23 +36,27 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/yourusername/flowforge.git
    cd flowforge
    ```
 
 2. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your API keys
    ```
 
 3. **Using Docker (Recommended)**
+
    ```bash
    docker-compose up -d
    ```
 
 4. **Manual Setup**
+
    ```bash
    # Backend
    cd backend
@@ -63,8 +71,8 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
    ```
 
 5. **Access the application**
-   - Frontend: http://localhost:5173
-   - API: http://localhost:3001
+   - Frontend: <http://localhost:5173>
+   - API: <http://localhost:3001>
 
 ## 📖 Documentation
 
@@ -75,6 +83,7 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 ## 🛠️ Technology Stack
 
 ### Frontend
+
 - React 18 with TypeScript
 - React Flow for visual workflows
 - Tailwind CSS for styling
@@ -82,6 +91,7 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 - Zustand for state management
 
 ### Backend
+
 - Node.js with Express.js
 - MongoDB with Mongoose
 - GitHub API integration
@@ -112,18 +122,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Status
 
-FlowForge is currently in **alpha**. We're actively developing core features and would love your feedback!
+FlowForge is currently in **beta**. Core features including AI integration are complete and we're preparing for enterprise features!
 
 ### Roadmap
 
 - [x] Phase 1: MVP with visual builder and action discovery
-- [ ] Phase 2: AI integration and advanced features (in progress)
-- [ ] Phase 3: Enterprise features and marketplace
+- [x] Phase 2: AI integration and advanced features ✅ COMPLETED
+  - [x] OpenAI GPT-4 integration for workflow generation
+  - [x] Natural language to workflow conversion
+  - [x] AI-powered workflow suggestions
+  - [x] Intelligent action categorization (14 categories)
+  - [x] Workflow persistence to MongoDB
+  - [x] Enhanced GitHub API integration with authentication
+  - [x] Advanced action metadata parsing
+- [ ] Phase 3: Enterprise features and marketplace (next)
 - [ ] Phase 4: Multi-platform support
 
 ## 💬 Support
 
-- 📧 Email: support@flowforge.dev
+- 📧 Email: <support@flowforge.dev>
 - 💬 Discord: [Join our community](https://discord.gg/flowforge)
 - 🐛 Issues: [GitHub Issues](https://github.com/yourusername/flowforge/issues)
 
@@ -134,3 +151,4 @@ FlowForge is currently in **alpha**. We're actively developing core features and
 ---
 
 <p align="center">Made with ❤️ by the FlowForge Team</p>
+<!-- markdownlint-enable MD033 -->

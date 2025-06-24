@@ -77,6 +77,10 @@ frontend/src/
 2. **Visual Programming**: Nodes represent actions, edges represent dependencies
 3. **Real-time Preview**: YAML updates as workflow changes
 4. **Responsive Design**: Works on desktop and tablet devices
+5. **AI Integration**: Natural language input for workflow generation
+6. **Smart Categorization**: 14 categories for intuitive action discovery
+7. **State Management**: Zustand for global state, React hooks for local state
+8. **Error Boundaries**: Graceful error handling throughout the UI
 
 ## Backend Architecture
 
@@ -140,16 +144,39 @@ backend/
   name: String,
   description: String,
   repository: String,        // owner/repo@version
-  category: String,
+  category: String,          // One of 14 intelligent categories
   author: String,
   stars: Number,
   lastUpdated: Date,
-  inputs: Map,              // Input parameters
-  outputs: Map,             // Output variables
+  inputs: Map,              // Input parameters with validation
+  outputs: Map,             // Output variables  
   runs: Object,             // Execution config
-  branding: Object          // Icon and color
+  branding: Object,         // Icon and color
+  keywords: [String],       // For enhanced search
+  verified: Boolean,        // GitHub verified actions
+  usage: {
+    count: Number,          // Usage statistics
+    lastUsed: Date
+  }
 }
 ```
+
+### Categories
+The system uses 14 intelligent categories:
+- **setup**: Environment and tool setup (Node.js, Python, etc.)
+- **build**: Compilation and building
+- **test**: Testing and quality assurance  
+- **deploy**: Deployment to various platforms
+- **security**: Security scanning and compliance
+- **docker**: Container operations
+- **cloud**: Cloud provider integrations
+- **notification**: Alerts and notifications
+- **package**: Package management and publishing
+- **documentation**: Doc generation and publishing
+- **automation**: General automation tools
+- **monitoring**: Monitoring and observability
+- **utility**: Helper actions and utilities
+- **mobile**: Mobile app specific actions
 
 ### WorkflowTemplate Schema
 ```javascript
@@ -167,15 +194,27 @@ backend/
 
 ### GitHub API
 - **Purpose**: Fetch action metadata and repository information
-- **Authentication**: Personal Access Token
+- **Authentication**: Personal Access Token with proper scopes
 - **Rate Limiting**: 5000 requests/hour (authenticated)
 - **Caching**: 6-hour TTL for action metadata
+- **Features**:
+  - Action.yml parsing from repositories
+  - Star count and popularity metrics
+  - Author and organization information
+  - Version tag resolution
+  - Batch processing for efficiency
 
 ### OpenAI API
 - **Purpose**: Natural language workflow generation
-- **Model**: GPT-4
+- **Model**: GPT-4 (gpt-4-turbo-preview)
 - **Rate Limiting**: Custom limits (20 req/15min)
 - **Context**: System prompts for workflow expertise
+- **Features**:
+  - Intelligent prompt engineering
+  - Context-aware workflow generation
+  - Error explanation in plain English
+  - Optimization suggestions
+  - Multi-step workflow understanding
 
 ### actionlint
 - **Purpose**: YAML syntax validation

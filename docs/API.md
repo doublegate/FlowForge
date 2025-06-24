@@ -97,47 +97,107 @@ Response:
 
 #### Generate Workflow
 ```http
-POST /api/ai/generate
+POST /api/ai/generate-workflow
 ```
 
 Request Body:
 ```json
 {
-  "prompt": "Create a workflow that builds and tests a Node.js application"
+  "prompt": "Create a workflow that builds and tests a Node.js application",
+  "options": {
+    "complexity": "medium",    // simple, medium, complex
+    "optimize": true,         // Include optimization suggestions
+    "explain": true          // Include explanations
+  }
 }
 ```
 
 Response:
 ```json
 {
-  "name": "Node.js CI",
-  "description": "Build and test Node.js application",
-  "actions": [
-    {
-      "name": "Checkout code",
-      "repository": "actions/checkout@v4",
-      "inputs": {},
-      "order": 1
-    },
-    {
-      "name": "Setup Node.js",
-      "repository": "actions/setup-node@v4",
-      "inputs": {
-        "node-version": "18"
-      },
-      "order": 2
-    }
-  ],
+  "success": true,
   "workflow": {
     "name": "Node.js CI",
-    "on": ["push", "pull_request"],
+    "description": "Comprehensive CI/CD pipeline for Node.js applications",
+    "on": {
+      "push": {
+        "branches": ["main", "develop"]
+      },
+      "pull_request": {
+        "branches": ["main"]
+      }
+    },
     "jobs": {
       "test": {
         "runs-on": "ubuntu-latest",
-        "steps": [...]
+        "strategy": {
+          "matrix": {
+            "node-version": [16, 18, 20]
+          }
+        },
+        "steps": [
+          {
+            "name": "Checkout code",
+            "uses": "actions/checkout@v4"
+          },
+          {
+            "name": "Setup Node.js",
+            "uses": "actions/setup-node@v4",
+            "with": {
+              "node-version": "${{ matrix.node-version }}",
+              "cache": "npm"
+            }
+          },
+          {
+            "name": "Install dependencies",
+            "run": "npm ci"
+          },
+          {
+            "name": "Run tests",
+            "run": "npm test"
+          }
+        ]
       }
     }
-  }
+  },
+  "explanation": "This workflow runs on push to main/develop branches and on pull requests. It tests against multiple Node.js versions for compatibility.",
+  "optimizations": [
+    "Uses npm ci for faster, reproducible installs",
+    "Caches npm dependencies for speed",
+    "Tests multiple Node.js versions in parallel"
+  ]
+}
+```
+
+#### Get Workflow Suggestions
+```http
+POST /api/ai/suggest
+```
+
+Request Body:
+```json
+{
+  "context": "React application with TypeScript",
+  "currentWorkflow": {}, // Optional: existing workflow to enhance
+  "goals": ["testing", "deployment", "security"]
+}
+```
+
+Response:
+```json
+{
+  "suggestions": [
+    {
+      "action": "codecov/codecov-action@v3",
+      "reason": "Add code coverage reporting for better visibility",
+      "placement": "after-tests"
+    },
+    {
+      "action": "actions/upload-artifact@v3",
+      "reason": "Save build artifacts for deployment",
+      "placement": "after-build"
+    }
+  ]
 }
 ```
 

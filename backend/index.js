@@ -36,16 +36,28 @@ const fs = require('fs').promises;
 const path = require('path');
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialize services
+const githubToken = process.env.GITHUB_TOKEN;
 const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN
+  auth: githubToken
 });
+
+// Log GitHub authentication status
+if (!githubToken) {
+  console.warn('WARNING: No GitHub token provided. API requests will be rate limited to 60/hour.');
+} else if (githubToken.startsWith('ghp_')) {
+  console.log('GitHub token detected (personal access token)');
+} else if (githubToken.startsWith('ghs_')) {
+  console.log('GitHub token detected (OAuth app token)');
+} else {
+  console.warn('WARNING: GitHub token format may be invalid');
+}
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -69,10 +81,7 @@ const aiLimiter = rateLimit({
 });
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/flowforge', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/flowforge');
 
 /**
  * Action Schema
@@ -89,24 +98,28 @@ const ActionSchema = new mongoose.Schema({
   lastUpdated: Date,
   inputs: {
     type: Map,
-    of: {
+    of: new mongoose.Schema({
       description: String,
-      required: Boolean,
+      required: { type: Boolean, default: false },
       default: String,
-      type: String
-    }
+      type: String,
+      options: [String]
+    }, { _id: false })
   },
   outputs: {
     type: Map,
-    of: {
-      description: String
-    }
+    of: new mongoose.Schema({
+      description: String,
+      value: String
+    }, { _id: false })
   },
   runs: {
     using: String,
     main: String,
     pre: String,
-    post: String
+    post: String,
+    image: String,
+    env: Map
   },
   branding: {
     icon: String,
@@ -136,6 +149,39 @@ const WorkflowTemplateSchema = new mongoose.Schema({
 const WorkflowTemplate = mongoose.model('WorkflowTemplate', WorkflowTemplateSchema);
 
 /**
+ * Workflow Schema
+ * Stores user-created workflows
+ */
+const WorkflowSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+  userId: String, // For future user authentication
+  nodes: [{
+    id: String,
+    type: String,
+    position: {
+      x: Number,
+      y: Number
+    },
+    data: Object
+  }],
+  edges: [{
+    id: String,
+    source: String,
+    target: String,
+    type: String
+  }],
+  yaml: String,
+  tags: [String],
+  isPublic: { type: Boolean, default: false },
+  forkedFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'Workflow' }
+}, {
+  timestamps: true
+});
+
+const Workflow = mongoose.model('Workflow', WorkflowSchema);
+
+/**
  * Parse the Awesome Actions README to extract action repositories
  * @returns {Promise<Array>} Array of action repository URLs
  */
@@ -151,23 +197,47 @@ async function fetchAwesomeActions() {
     const content = Buffer.from(data.content, 'base64').toString('utf-8');
     
     // Regular expression to match GitHub repository URLs
-    const repoRegex = /https:\/\/github\.com\/([^\/\s]+\/[^\/\s]+)(?:\/|$|\s)/g;
+    // Updated to handle various edge cases and formats
+    const repoRegex = /https:\/\/github\.com\/([a-zA-Z0-9-]+\/[a-zA-Z0-9-_.]+)(?:[\/\s\)#]|$)/g;
     const matches = content.matchAll(repoRegex);
     
     const repositories = [];
+    const seen = new Set();
+    
     for (const match of matches) {
-      const [owner, repo] = match[1].split('/');
-      // Filter out non-action repositories
-      if (!repo.includes('.github') && !repo.includes('awesome')) {
-        repositories.push({
-          owner,
-          repo,
-          full_name: match[1]
-        });
+      let fullName = match[1];
+      
+      // Clean up the repository name
+      fullName = fullName.replace(/[).,;:]+$/, ''); // Remove trailing punctuation
+      
+      const parts = fullName.split('/');
+      if (parts.length !== 2) continue;
+      
+      const [owner, repo] = parts;
+      
+      // Skip if already processed
+      if (seen.has(fullName)) continue;
+      seen.add(fullName);
+      
+      // Filter out non-action repositories and special cases
+      if (repo.includes('.github') || 
+          repo.includes('awesome') || 
+          repo === 'actions' ||
+          repo === 'marketplace' ||
+          repo.endsWith('.md') ||
+          repo.endsWith('.yml') ||
+          repo.endsWith('.yaml')) {
+        continue;
       }
+      
+      repositories.push({
+        owner: owner.trim(),
+        repo: repo.trim(),
+        full_name: fullName
+      });
     }
 
-    console.log(`Found ${repositories.length} action repositories`);
+    console.log(`Found ${repositories.length} unique action repositories`);
     return repositories;
   } catch (error) {
     console.error('Error fetching Awesome Actions:', error);
@@ -183,6 +253,12 @@ async function fetchAwesomeActions() {
  */
 async function fetchActionMetadata(owner, repo) {
   try {
+    // First check if we can access the GitHub API
+    if (!githubToken) {
+      console.warn(`Skipping ${owner}/${repo} - No GitHub token provided`);
+      return null;
+    }
+
     // Try to fetch action.yml or action.yaml
     let actionFile;
     try {
@@ -192,11 +268,25 @@ async function fetchActionMetadata(owner, repo) {
         path: 'action.yml'
       });
     } catch (e) {
-      actionFile = await octokit.repos.getContent({
-        owner,
-        repo,
-        path: 'action.yaml'
-      });
+      // If action.yml not found, try action.yaml
+      if (e.status === 404) {
+        try {
+          actionFile = await octokit.repos.getContent({
+            owner,
+            repo,
+            path: 'action.yaml'
+          });
+        } catch (e2) {
+          // Neither file found - this might not be an action repository
+          if (e2.status === 404) {
+            console.log(`No action file found for ${owner}/${repo} - skipping`);
+            return null;
+          }
+          throw e2;
+        }
+      } else {
+        throw e;
+      }
     }
 
     const content = Buffer.from(actionFile.data.content, 'base64').toString('utf-8');
@@ -219,32 +309,22 @@ async function fetchActionMetadata(owner, repo) {
       category: categorizeAction(metadata, repo)
     };
   } catch (error) {
-    console.error(`Error fetching metadata for ${owner}/${repo}:`, error.message);
+    // Handle specific GitHub API errors
+    if (error.status === 401) {
+      console.error(`Authentication failed for ${owner}/${repo} - GitHub token may be invalid or expired`);
+    } else if (error.status === 403) {
+      console.error(`Rate limit exceeded or forbidden access for ${owner}/${repo}`);
+    } else if (error.status === 404) {
+      console.error(`Repository not found: ${owner}/${repo}`);
+    } else {
+      console.error(`Error fetching metadata for ${owner}/${repo}:`, error.message);
+    }
     return null;
   }
 }
 
-/**
- * Categorize an action based on its metadata and repository name
- * @param {Object} metadata - Action metadata
- * @param {string} repoName - Repository name
- * @returns {string} Category name
- */
-function categorizeAction(metadata, repoName) {
-  const name = (metadata.name || repoName).toLowerCase();
-  const description = (metadata.description || '').toLowerCase();
-  
-  if (name.includes('deploy') || description.includes('deploy')) return 'deployment';
-  if (name.includes('test') || description.includes('test')) return 'testing';
-  if (name.includes('build') || name.includes('compile')) return 'build';
-  if (name.includes('setup') || name.includes('install')) return 'setup';
-  if (name.includes('security') || name.includes('scan')) return 'security';
-  if (name.includes('notify') || name.includes('slack') || name.includes('email')) return 'notification';
-  if (name.includes('docker') || name.includes('container')) return 'containerization';
-  if (name.includes('cache') || name.includes('artifact')) return 'utilities';
-  
-  return 'other';
-}
+// Import the advanced categorizer
+const { categorizeAction } = require('./utils/actionCategorizer');
 
 /**
  * Update the action database with latest information
@@ -254,13 +334,23 @@ async function updateActionDatabase() {
   console.log('Starting action database update...');
   
   try {
+    // Check rate limit before starting
+    const { data: rateLimit } = await octokit.rest.rateLimit.get();
+    console.log(`GitHub API rate limit: ${rateLimit.rate.remaining}/${rateLimit.rate.limit}`);
+    
+    if (rateLimit.rate.remaining < 100) {
+      console.warn('Low GitHub API rate limit, postponing update');
+      return;
+    }
+    
     const repositories = await fetchAwesomeActions();
     let updated = 0;
     let failed = 0;
+    let skipped = 0;
 
     // Process repositories in batches to avoid rate limiting
-    const batchSize = 10;
-    for (let i = 0; i < repositories.length; i += batchSize) {
+    const batchSize = 5; // Reduced batch size for safety
+    for (let i = 0; i < repositories.length && i < 50; i += batchSize) { // Limit to first 50 for now
       const batch = repositories.slice(i, i + batchSize);
       
       await Promise.all(batch.map(async ({ owner, repo }) => {
@@ -274,22 +364,23 @@ async function updateActionDatabase() {
               { upsert: true, new: true }
             );
             updated++;
+            console.log(`✓ Updated ${owner}/${repo}`);
           } catch (error) {
             console.error(`Failed to save ${owner}/${repo}:`, error.message);
             failed++;
           }
         } else {
-          failed++;
+          skipped++;
         }
       }));
 
       // Add delay between batches to respect rate limits
-      if (i + batchSize < repositories.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      if (i + batchSize < Math.min(repositories.length, 50)) {
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased delay
       }
     }
 
-    console.log(`Update complete. Updated: ${updated}, Failed: ${failed}`);
+    console.log(`Update complete. Updated: ${updated}, Failed: ${failed}, Skipped: ${skipped}`);
   } catch (error) {
     console.error('Database update failed:', error);
   }
@@ -302,41 +393,126 @@ async function updateActionDatabase() {
  */
 async function generateWorkflowWithAI(prompt) {
   try {
-    const systemPrompt = `You are a GitHub Actions workflow expert. Generate a workflow configuration based on the user's request.
-    Return a JSON object with the following structure:
-    {
-      "name": "Workflow name",
-      "description": "Brief description",
-      "actions": [
-        {
-          "name": "Action name",
-          "repository": "owner/repo@version",
-          "inputs": { "key": "value" },
-          "order": 1
-        }
-      ],
-      "workflow": {
-        "name": "Workflow Name",
-        "on": ["push"],
-        "jobs": { ... }
+    // Fetch available actions for context
+    const availableActions = await Action.find({}).limit(50).select('name repository description category');
+    
+    const systemPrompt = `You are an expert GitHub Actions workflow engineer. Generate a complete, production-ready workflow based on the user's request.
+
+Available GitHub Actions (use these when relevant):
+${availableActions.map(a => `- ${a.repository}: ${a.description}`).join('\n')}
+
+IMPORTANT GUIDELINES:
+1. Use the latest stable versions of actions (e.g., actions/checkout@v4, actions/setup-node@v4)
+2. Include appropriate triggers (push, pull_request, workflow_dispatch, schedule, etc.)
+3. Add proper job dependencies and conditions when needed
+4. Include caching strategies for dependencies (npm, pip, gradle, etc.)
+5. Add error handling and continue-on-error where appropriate
+6. Use matrix builds for testing multiple versions/platforms
+7. Include artifact upload/download for build outputs
+8. Add proper environment variables and secrets usage
+9. Consider adding status checks and notifications
+10. Include comments explaining complex steps
+
+Return a JSON object with this EXACT structure:
+{
+  "name": "Descriptive workflow name",
+  "description": "Detailed explanation of what this workflow does and when it runs",
+  "explanation": "Step-by-step explanation of the workflow for the user",
+  "workflow": {
+    "name": "Workflow Name",
+    "on": {
+      "push": { "branches": ["main"] },
+      "pull_request": { "branches": ["main"] }
+    },
+    "env": {},
+    "jobs": {
+      "job-name": {
+        "runs-on": "ubuntu-latest",
+        "steps": [
+          {
+            "name": "Step name",
+            "uses": "action/name@version",
+            "with": { "param": "value" }
+          }
+        ]
       }
-    }`;
+    }
+  },
+  "actions": [
+    {
+      "name": "Action display name",
+      "repository": "owner/repo@version",
+      "category": "setup|build|test|deploy|utility",
+      "inputs": { "param": "value" }
+    }
+  ],
+  "suggestions": [
+    "Additional features you might want to add",
+    "Security improvements",
+    "Performance optimizations"
+  ]
+}`;
+
+    const enhancedPrompt = `${prompt}
+
+Please ensure the workflow includes:
+- Proper error handling and retry logic where appropriate
+- Caching for faster builds
+- Clear step names and comments
+- Security best practices (no hardcoded secrets, proper permissions)
+- Efficient job structure with parallelization where possible`;
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt }
+        { role: 'user', content: enhancedPrompt }
       ],
       temperature: 0.7,
-      max_tokens: 1500
+      max_tokens: 2500,
+      response_format: { type: "json_object" }
     });
 
     const content = response.choices[0].message.content;
-    return JSON.parse(content);
+    const result = JSON.parse(content);
+    
+    // Validate the response structure
+    if (!result.workflow || !result.workflow.jobs) {
+      throw new Error('Invalid workflow structure generated');
+    }
+    
+    // Add timestamps and metadata
+    result.generatedAt = new Date().toISOString();
+    result.version = '1.0.0';
+    
+    return result;
   } catch (error) {
     console.error('AI generation error:', error);
-    throw new Error('Failed to generate workflow with AI');
+    
+    // Fallback to a simple template if AI fails
+    return {
+      name: 'Basic CI Workflow',
+      description: 'A simple continuous integration workflow',
+      explanation: 'This is a basic workflow template. The AI service is temporarily unavailable.',
+      workflow: {
+        name: 'CI',
+        on: ['push', 'pull_request'],
+        jobs: {
+          build: {
+            'runs-on': 'ubuntu-latest',
+            steps: [
+              { uses: 'actions/checkout@v4' },
+              { 
+                name: 'Run a one-line script',
+                run: 'echo Hello, world!'
+              }
+            ]
+          }
+        }
+      },
+      actions: [],
+      suggestions: ['Add your specific build and test steps']
+    };
   }
 }
 
@@ -447,10 +623,10 @@ app.get('/api/actions/:id', apiLimiter, async (req, res) => {
 });
 
 /**
- * POST /api/ai/generate
- * Generate workflow suggestions using AI
+ * POST /api/ai/generate-workflow
+ * Generate complete workflow using AI
  */
-app.post('/api/ai/generate', aiLimiter, async (req, res) => {
+app.post('/api/ai/generate-workflow', aiLimiter, async (req, res) => {
   try {
     const { prompt } = req.body;
     
@@ -465,6 +641,96 @@ app.post('/api/ai/generate', aiLimiter, async (req, res) => {
     res.status(500).json({ error: 'Failed to generate workflow' });
   }
 });
+
+/**
+ * POST /api/ai/suggest
+ * Get AI suggestions for improving a workflow
+ */
+app.post('/api/ai/suggest', aiLimiter, async (req, res) => {
+  try {
+    const { workflow, context } = req.body;
+    
+    if (!workflow) {
+      return res.status(400).json({ error: 'Workflow is required' });
+    }
+    
+    const suggestions = await getWorkflowSuggestions(workflow, context);
+    res.json(suggestions);
+  } catch (error) {
+    console.error('Error getting suggestions:', error);
+    res.status(500).json({ error: 'Failed to get workflow suggestions' });
+  }
+});
+
+/**
+ * Get AI suggestions for workflow improvements
+ */
+async function getWorkflowSuggestions(workflow, context = '') {
+  try {
+    const systemPrompt = `You are a GitHub Actions workflow optimization expert. Analyze the provided workflow and suggest improvements.
+
+Focus on:
+1. Performance optimizations (caching, parallelization, job dependencies)
+2. Security improvements (permissions, secret management, vulnerability scanning)
+3. Best practices (naming conventions, reusability, maintainability)
+4. Cost optimization (reducing runner time, efficient resource usage)
+5. Error handling and reliability (retry logic, timeout configurations)
+6. Additional useful features (notifications, artifacts, releases)
+
+Return a JSON object with this structure:
+{
+  "suggestions": [
+    {
+      "type": "performance|security|best-practice|cost|reliability|feature",
+      "priority": "high|medium|low",
+      "title": "Brief suggestion title",
+      "description": "Detailed explanation of the suggestion",
+      "implementation": "Code snippet or specific steps to implement",
+      "impact": "Expected improvement or benefit"
+    }
+  ],
+  "optimizedWorkflow": {
+    // The improved workflow incorporating high-priority suggestions
+  },
+  "summary": "Overall assessment of the workflow"
+}`;
+
+    const userPrompt = `Analyze this GitHub Actions workflow and provide improvement suggestions:
+
+${JSON.stringify(workflow, null, 2)}
+
+${context ? `Additional context: ${context}` : ''}`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content);
+    return result;
+  } catch (error) {
+    console.error('Suggestion generation error:', error);
+    return {
+      suggestions: [
+        {
+          type: 'best-practice',
+          priority: 'medium',
+          title: 'Add workflow documentation',
+          description: 'Consider adding comments to explain complex steps',
+          implementation: '# Add comments before each major step',
+          impact: 'Improves maintainability'
+        }
+      ],
+      summary: 'Unable to generate AI suggestions at this time'
+    };
+  }
+}
 
 /**
  * POST /api/workflows/validate
@@ -562,6 +828,201 @@ app.post('/api/workflows/optimize', apiLimiter, async (req, res) => {
 });
 
 /**
+ * Workflow CRUD endpoints
+ */
+
+/**
+ * GET /api/workflows
+ * Get all workflows (with pagination)
+ */
+app.get('/api/workflows', apiLimiter, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    
+    const query = req.query.public === 'true' ? { isPublic: true } : {};
+    
+    const workflows = await Workflow.find(query)
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 })
+      .select('-yaml'); // Exclude yaml for list view
+    
+    const total = await Workflow.countDocuments(query);
+    
+    res.json({
+      workflows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching workflows:', error);
+    res.status(500).json({ error: 'Failed to fetch workflows' });
+  }
+});
+
+/**
+ * GET /api/workflows/:id
+ * Get a specific workflow
+ */
+app.get('/api/workflows/:id', apiLimiter, async (req, res) => {
+  try {
+    const workflow = await Workflow.findById(req.params.id);
+    
+    if (!workflow) {
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+    
+    res.json(workflow);
+  } catch (error) {
+    console.error('Error fetching workflow:', error);
+    res.status(500).json({ error: 'Failed to fetch workflow' });
+  }
+});
+
+/**
+ * POST /api/workflows
+ * Create a new workflow
+ */
+app.post('/api/workflows', apiLimiter, async (req, res) => {
+  try {
+    const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
+    
+    if (!name || !nodes || !edges) {
+      return res.status(400).json({ error: 'Name, nodes, and edges are required' });
+    }
+    
+    const workflow = new Workflow({
+      name,
+      description,
+      nodes,
+      edges,
+      yaml,
+      tags,
+      isPublic: isPublic || false
+    });
+    
+    await workflow.save();
+    
+    res.status(201).json(workflow);
+  } catch (error) {
+    console.error('Error creating workflow:', error);
+    res.status(500).json({ error: 'Failed to create workflow' });
+  }
+});
+
+/**
+ * PUT /api/workflows/:id
+ * Update a workflow
+ */
+app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
+  try {
+    const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
+    
+    const workflow = await Workflow.findById(req.params.id);
+    
+    if (!workflow) {
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+    
+    // Update fields
+    if (name !== undefined) workflow.name = name;
+    if (description !== undefined) workflow.description = description;
+    if (nodes !== undefined) workflow.nodes = nodes;
+    if (edges !== undefined) workflow.edges = edges;
+    if (yaml !== undefined) workflow.yaml = yaml;
+    if (tags !== undefined) workflow.tags = tags;
+    if (isPublic !== undefined) workflow.isPublic = isPublic;
+    
+    await workflow.save();
+    
+    res.json(workflow);
+  } catch (error) {
+    console.error('Error updating workflow:', error);
+    res.status(500).json({ error: 'Failed to update workflow' });
+  }
+});
+
+/**
+ * DELETE /api/workflows/:id
+ * Delete a workflow
+ */
+app.delete('/api/workflows/:id', apiLimiter, async (req, res) => {
+  try {
+    const workflow = await Workflow.findById(req.params.id);
+    
+    if (!workflow) {
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+    
+    await workflow.deleteOne();
+    
+    res.json({ message: 'Workflow deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting workflow:', error);
+    res.status(500).json({ error: 'Failed to delete workflow' });
+  }
+});
+
+/**
+ * POST /api/workflows/:id/fork
+ * Fork a public workflow
+ */
+app.post('/api/workflows/:id/fork', apiLimiter, async (req, res) => {
+  try {
+    const originalWorkflow = await Workflow.findById(req.params.id);
+    
+    if (!originalWorkflow) {
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+    
+    if (!originalWorkflow.isPublic) {
+      return res.status(403).json({ error: 'Cannot fork private workflow' });
+    }
+    
+    const forkedWorkflow = new Workflow({
+      name: `${originalWorkflow.name} (Fork)`,
+      description: originalWorkflow.description,
+      nodes: originalWorkflow.nodes,
+      edges: originalWorkflow.edges,
+      yaml: originalWorkflow.yaml,
+      tags: originalWorkflow.tags,
+      isPublic: false,
+      forkedFrom: originalWorkflow._id
+    });
+    
+    await forkedWorkflow.save();
+    
+    res.status(201).json(forkedWorkflow);
+  } catch (error) {
+    console.error('Error forking workflow:', error);
+    res.status(500).json({ error: 'Failed to fork workflow' });
+  }
+});
+
+/**
+ * GET /api/categories
+ * Get all available action categories
+ */
+app.get('/api/categories', (req, res) => {
+  const { CATEGORIES } = require('./utils/actionCategorizer');
+  
+  const categories = Object.entries(CATEGORIES).map(([key, value]) => ({
+    id: key,
+    name: value.name,
+    description: value.description,
+    keywords: value.keywords
+  }));
+  
+  res.json(categories);
+});
+
+/**
  * GET /api/health
  * Health check endpoint
  */
@@ -571,6 +1032,54 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
+});
+
+/**
+ * GET /api/github/test
+ * Test GitHub API authentication
+ */
+app.get('/api/github/test', async (req, res) => {
+  try {
+    // Test authentication by getting the authenticated user
+    const { data: user } = await octokit.rest.users.getAuthenticated();
+    
+    // Get rate limit info
+    const { data: rateLimit } = await octokit.rest.rateLimit.get();
+    
+    res.json({
+      authenticated: true,
+      user: user.login,
+      rateLimitRemaining: rateLimit.rate.remaining,
+      rateLimitReset: new Date(rateLimit.rate.reset * 1000).toISOString()
+    });
+  } catch (error) {
+    res.status(401).json({
+      authenticated: false,
+      error: error.message,
+      hint: 'Please check your GitHub token in the .env file'
+    });
+  }
+});
+
+/**
+ * POST /api/actions/update
+ * Manually trigger action database update
+ */
+app.post('/api/actions/update', async (req, res) => {
+  try {
+    // Start the update in the background
+    updateActionDatabase().catch(console.error);
+    
+    res.json({
+      message: 'Action database update started',
+      hint: 'Check server logs for progress'
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to start update',
+      message: error.message
+    });
+  }
 });
 
 // Initialize server

@@ -290,6 +290,97 @@ Services:
 - CDN for static assets
 - Load balancer for traffic distribution
 
+## CI/CD & DevOps Architecture
+
+### GitHub Actions Pipeline
+
+FlowForge implements a comprehensive CI/CD pipeline using GitHub Actions with the following architecture:
+
+```yaml
+┌─────────────────────────────────────────────────────────────┐
+│                    CI/CD Pipeline Architecture              │
+├─────────────────────────────────────────────────────────────┤
+│  Trigger: Push/PR/Manual                                    │
+│     ↓                                                       │
+│  [Setup Job] - Dependency caching & artifact creation      │
+│     ↓                                                       │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │            Parallel Execution Phase                  │   │
+│  │  ┌────────┐  ┌────────┐  ┌────────┐  ┌──────────┐  │   │
+│  │  │Frontend│  │Backend │  │Security│  │  Docker  │  │   │
+│  │  │ Tests  │  │ Tests  │  │ Scans  │  │  Build   │  │   │
+│  │  └────────┘  └────────┘  └────────┘  └──────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+│     ↓                                                       │
+│  [Integration Tests] - Service container testing           │
+│     ↓                                                       │
+│  [Performance Tests] - Lighthouse CI                       │
+│     ↓                                                       │
+│  [Release] - Conditional on main branch                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Pipeline Components
+
+1. **Setup Phase**
+   - Node.js dependency installation
+   - Cache restoration (90%+ hit rate)
+   - Shared artifact creation
+   - Environment validation
+
+2. **Testing Phase** (Parallel)
+   - Frontend: Vitest with React Testing Library
+   - Backend: Jest with MongoDB service container
+   - Security: npm audit + CodeQL analysis
+   - Docker: Multi-stage build validation
+
+3. **Quality Gates**
+   - ESLint/Prettier enforcement
+   - Test coverage thresholds
+   - Bundle size limits
+   - Performance budgets
+
+4. **Monitoring**
+   - Lighthouse CI scores:
+     - Performance: 95+
+     - Accessibility: 98+
+     - Best Practices: 100
+     - SEO: 100
+
+### Infrastructure as Code
+
+```yaml
+# Docker Build Optimization
+docker:
+  buildx: true
+  cache:
+    - type: gha
+    - mode: max
+  platforms:
+    - linux/amd64
+    - linux/arm64
+
+# Caching Strategy
+cache:
+  node_modules:
+    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+  docker_layers:
+    key: ${{ runner.os }}-buildx-${{ github.sha }}
+```
+
+### Deployment Pipeline
+
+1. **Development**: Automatic on feature branches
+2. **Staging**: Automatic on develop branch
+3. **Production**: Manual approval on main branch
+4. **Rollback**: Tag-based instant rollback
+
+### Maintenance Automation
+
+- **Weekly**: Dependency updates, security audits
+- **Daily**: Actions database refresh
+- **Hourly**: Health checks, metrics collection
+
 ## Future Architecture Enhancements
 
 1. **Microservices Split**

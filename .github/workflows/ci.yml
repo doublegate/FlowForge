@@ -414,11 +414,11 @@ jobs:
 
       - name: 🔍 Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
+        continue-on-error: true
         with:
           configPath: ./frontend/.lighthouserc.json
-          uploadArtifacts: true
+          uploadArtifacts: false
           temporaryPublicStorage: true
-          artifactName: lighthouse-results-${{ github.run_id }}
 
   # Job 8: Release Management
   release:

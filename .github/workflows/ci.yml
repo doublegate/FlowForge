@@ -414,7 +414,7 @@ jobs:
           configPath: ./frontend/.lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true
-          artifactName: lighthouse-performance-results-${{ github.sha }}
+          artifactName: lighthouse-results-${{ github.run_id }}
 
   # Job 8: Release Management
   release:

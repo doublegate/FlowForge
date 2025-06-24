@@ -2,6 +2,19 @@
  * Utility for adding passive event listeners to improve scrolling performance
  */
 
+// Type definitions for DOM APIs
+type EventListenerOrEventListenerObject = EventListener | EventListenerObject;
+type EventListener = (evt: Event) => void;
+interface EventListenerObject {
+  handleEvent(evt: Event): void;
+}
+interface AddEventListenerOptions {
+  capture?: boolean;
+  once?: boolean;
+  passive?: boolean;
+  signal?: AbortSignal;
+}
+
 export function addPassiveEventListener(
   element: HTMLElement | typeof window,
   event: string,
@@ -31,15 +44,21 @@ export function initializePassiveListeners(): void {
   });
   
   // Override addEventListener to use passive by default for touch/wheel events
-  const originalAddEventListener = EventTarget.prototype.addEventListener;
-  EventTarget.prototype.addEventListener = function(type: string, listener: any, options?: any) {
-    if (typeof type === 'string' && ['touchstart', 'touchmove', 'wheel', 'scroll'].includes(type)) {
-      if (typeof options === 'object') {
-        options.passive = true;
-      } else if (options === undefined || typeof options === 'boolean') {
-        options = { passive: true, capture: options || false };
+  if (typeof window !== 'undefined' && window.EventTarget) {
+    const originalAddEventListener = window.EventTarget.prototype.addEventListener;
+    window.EventTarget.prototype.addEventListener = function(
+      type: string, 
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions
+    ) {
+      if (typeof type === 'string' && ['touchstart', 'touchmove', 'wheel', 'scroll'].includes(type)) {
+        if (typeof options === 'object') {
+          options.passive = true;
+        } else if (options === undefined || typeof options === 'boolean') {
+          options = { passive: true, capture: options || false };
+        }
       }
-    }
-    return originalAddEventListener.call(this, type, listener, options);
-  };
+      return originalAddEventListener.call(this, type, listener, options);
+    };
+  }
 }

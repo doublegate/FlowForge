@@ -176,6 +176,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Actions List */}
       <div className="flex-1 overflow-y-auto">
+        <h2 className="sr-only">GitHub Actions Library</h2>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
@@ -213,6 +214,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       onClick={() => toggleCategory(category.id)}
                       className="w-full flex items-center justify-between p-2 text-left hover:bg-gray-50 rounded-md"
+                      aria-label={`${expandedCategories.has(category.id) ? 'Collapse' : 'Expand'} ${category.name} category`}
+                      aria-expanded={expandedCategories.has(category.id)}
                     >
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${getCategoryColor(category.id)}`} />

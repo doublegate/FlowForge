@@ -123,6 +123,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             onClick={handleSubmit}
             disabled={loading || !prompt.trim()}
             className="px-3 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Generate workflow from prompt"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />

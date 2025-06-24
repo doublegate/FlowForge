@@ -62,6 +62,7 @@ const FlowForge = () => {
   return (
     <ReactFlowProvider>
       <div className="h-screen flex bg-gray-50">
+        <h1 className="sr-only">FlowForge - Visual GitHub Actions Workflow Builder</h1>
         {/* Sidebar with AI Assistant and Actions */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
           <AIAssistant
@@ -91,6 +92,7 @@ const FlowForge = () => {
                 <button
                   onClick={() => setError(null)}
                   className="ml-2 text-red-500 hover:text-red-700"
+                  aria-label="Close error message"
                 >
                   ×
                 </button>

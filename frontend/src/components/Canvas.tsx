@@ -406,6 +406,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               <button
                 onClick={() => setShowYaml(!showYaml)}
                 className="px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors flex items-center gap-1.5 text-sm"
+                aria-label={showYaml ? 'Hide YAML preview' : 'Show YAML preview'}
               >
                 <FileCode className="w-4 h-4" />
                 {showYaml ? 'Hide' : 'Show'} YAML
@@ -414,6 +415,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               <button 
                 onClick={handleSave}
                 className="px-3 py-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors flex items-center gap-1.5 text-sm"
+                aria-label="Save workflow"
               >
                 <Save className="w-4 h-4" />
                 Save
@@ -422,6 +424,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               <button 
                 onClick={handleExport}
                 className="px-3 py-1.5 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors flex items-center gap-1.5 text-sm"
+                aria-label="Export workflow as YAML"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -441,6 +444,7 @@ export const Canvas: React.FC<CanvasProps> = ({
               <button 
                 onClick={onShowSuggestions}
                 className="px-3 py-1.5 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors flex items-center gap-1.5 text-sm"
+                aria-label="Show workflow suggestions"
               >
                 <Lightbulb className="w-4 h-4" />
                 Suggestions
@@ -452,6 +456,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                 onClick={undo}
                 disabled={historyIndex <= 0}
                 className="px-2 py-1.5 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Undo last action"
                 title="Undo"
               >
                 <Undo className="w-4 h-4" />
@@ -461,6 +466,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                 onClick={redo}
                 disabled={historyIndex >= history.length - 1}
                 className="px-2 py-1.5 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Redo last action"
                 title="Redo"
               >
                 <Redo className="w-4 h-4" />
@@ -470,6 +476,7 @@ export const Canvas: React.FC<CanvasProps> = ({
                 onClick={handleClear}
                 disabled={nodes.length === 0}
                 className="px-2 py-1.5 text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Clear entire workflow"
                 title="Clear workflow"
               >
                 <Trash2 className="w-4 h-4" />

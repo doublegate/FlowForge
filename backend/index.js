@@ -552,8 +552,9 @@ async function validateWorkflow(yamlContent) {
     // Clean up temp file on error
     try {
       await fs.unlink(tempFile);
-    } catch (_e) {
-      // Ignore file cleanup errors
+    } catch (cleanupError) {
+      // Log cleanup error but don't throw - the main error is more important
+      console.debug(`Failed to clean up temp file ${tempFile}: ${cleanupError.message}`);
     }
     
     // Parse actionlint errors

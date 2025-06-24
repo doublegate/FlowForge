@@ -337,7 +337,11 @@ async function fetchActionYaml(owner, repo) {
       });
       
       return parseActionYaml(data);
-    } catch (_error) {
+    } catch (error) {
+      // Log specific error only if it's not a 404 (expected when file doesn't exist)
+      if (error.status !== 404) {
+        console.debug(`Error fetching ${path} for ${owner}/${repo}: ${error.message}`);
+      }
       // Continue to next path
     }
   }

@@ -1,7 +1,9 @@
 # FlowForge Deployment Guide
 
+**Last Updated**: 2025-06-24
+
 ## Current Status
-FlowForge v0.2.0 is ready for deployment with full AI integration and workflow persistence capabilities.
+FlowForge v0.2.1 is ready for deployment with complete desktop distribution support, full AI integration, and workflow persistence capabilities.
 
 ## Prerequisites
 
@@ -35,14 +37,37 @@ FRONTEND_URL=https://flowforge.example.com
 SESSION_SECRET=your-random-session-secret-here
 ```
 
-## Deployment Options
+## Desktop Distribution
+
+### Flatpak Package (Linux)
+
+FlowForge now includes complete desktop distribution via Flatpak:
+
+```bash
+# Build distributable package
+./scripts/build-flowforge.sh
+
+# Build and install Flatpak
+./scripts/build-flatpak.sh --install --run
+```
+
+**Features:**
+- Self-contained deployment with embedded MongoDB
+- Desktop integration with `.yml` and `.yaml` file associations
+- Native desktop application experience via Electron
+- Unified build system for easy distribution
+- No external dependencies required
+
+See [Flatpak Build Guide](FLATPAK-BUILD.md) for detailed instructions.
+
+## Web Deployment Options
 
 ### Option 1: Docker Compose (Recommended)
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/flowforge.git
-   cd flowforge
+   git clone https://github.com/doublegate/FlowForge.git
+   cd FlowForge
    ```
 
 2. **Configure environment**
@@ -153,8 +178,8 @@ SESSION_SECRET=your-random-session-secret-here
 
 3. **Deploy with Docker Compose**
    ```bash
-   git clone https://github.com/yourusername/flowforge.git
-   cd flowforge
+   git clone https://github.com/doublegate/FlowForge.git
+   cd FlowForge
    # Configure .env
    docker-compose up -d
    ```

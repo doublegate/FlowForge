@@ -39,11 +39,18 @@ def process_package_lock(package_lock_path):
             
             # Extract SHA from integrity field
             if integrity.startswith('sha512-'):
-                sha512 = integrity[7:].replace('/', '').replace('+', '-').replace('=', '')
-                sha512 = sha512.ljust((len(sha512) + 3) // 4 * 4, '=')
+                sha512 = integrity[7:]
+                # Add padding if needed for proper base64 decoding
+                padding = 4 - (len(sha512) % 4)
+                if padding != 4:
+                    sha512 += '=' * padding
                 # Convert base64 to hex
                 import base64
-                sha512_hex = base64.b64decode(sha512).hex()
+                try:
+                    sha512_hex = base64.b64decode(sha512).hex()
+                except Exception as e:
+                    print(f"Warning: Failed to decode integrity for {name}: {e}")
+                    continue
             else:
                 # Download and calculate SHA512
                 sha512_hex = get_sha512(url)

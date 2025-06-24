@@ -67,3 +67,145 @@ actionlint
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+# Flatpak build artifacts
+.flatpak-builder/
+build-dir/
+repo/
+flatpak-repo/
+flatpak-build/
+package-build/
+electron-temp/
+*.flatpak
+*.flatpakref
+*.flatpakrepo
+
+# Generated source files (contain package URLs but no secrets)
+# Uncomment if you want to regenerate these each time
+# scripts/generated-sources-*.json
+# scripts/flowforge-electron-sources.json
+
+# Distribution packages (may contain embedded .env)
+flowforge-*.tar.gz
+flowforge-*.zip
+FlowForge-*.AppImage
+FlowForge-*.dmg
+FlowForge-*.exe
+
+# Temporary manifests
+scripts/io.github.flowforge.FlowForge.simple.yml
+
+# Runtime/user data
+.flowforge/
+run-flowforge.sh
+
+# Build logs
+*.build.log
+*-build.log
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# MongoDB data (additional patterns)
+mongod.lock
+mongodb/
+data/mongodb/
+
+# Generated test files
+test-results/
+junit.xml
+
+# Coverage reports (additional)
+lcov.info
+coverage.json
+
+# Performance profiles
+*.cpuprofile
+*.heapprofile
+*.heapsnapshot
+
+# Debug files
+*.map
+.sourcemaps/
+
+# Package manager caches
+.npm/
+.yarn/
+.pnpm-store/
+
+# Electron
+out/
+electron-builder.yml
+dist_electron/
+
+# Local config overrides
+*.local
+*.local.*
+config.local.js
+config.local.json
+
+# Security certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Editor directories (additional)
+.sublime-*
+.atom/
+*.code-workspace
+.history/
+
+# OS files (additional)
+.directory
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
+
+# Temporary build files
+*.pid
+*.seed
+*.pid.lock
+
+# Archive files (except when needed for distribution)
+*.tar
+*.tgz
+*.rar
+*.7z
+*.dmg
+*.iso
+*.jar
+
+# Python (for scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Flatpak specific caches
+.cache/
+npm-cache/
+flatpak-node/
+
+# User-specific files
+CLAUDE.local.md
+TODO.local.md
+NOTES.local.md
+
+# Keep our project images but ignore temporary ones
+!images/flowforge-logo.png
+!images/flowforge-banner.png
+!images/icon.png
+images/temp-*
+images/*.tmp

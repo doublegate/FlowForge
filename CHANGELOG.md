@@ -5,29 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2025-06-24
+## [0.2.1] - 2025-06-24
 
 ### Added
-- 📦 **Flatpak Support**
-  - Complete Flatpak packaging for Linux desktop distribution
+
+- 📦 **Complete Desktop Distribution**
+  - Finished Flatpak packaging for Linux desktop distribution
+  - Unified build system with `build-flowforge.sh` as main entry point
+  - Generated distributable package (`flowforge-0.2.0-linux-x64.tar.gz`)
+  - Consolidated all build scripts in `scripts/` directory
   - Electron wrapper for native desktop application experience
   - Embedded MongoDB instance for self-contained deployment
-  - Automated build scripts and tooling in `scripts/` directory
   - Desktop integration with `.yml` and `.yaml` file associations
   - Application menu entries and icon support
-  - Bundle creation for offline distribution
 
-- 🗂️ **Project Organization**
-  - Moved all Flatpak-related scripts to dedicated `scripts/` directory
-  - Created comprehensive Flatpak build documentation
-  - Added environment validation and setup scripts
-  - Improved project structure for better maintainability
+- 🗂️ **Project Organization & Build System**
+  - Unified build system with single entry point script
+  - All Flatpak-related scripts organized in `scripts/` directory
+  - Archive directory for reference Flatpak files
+  - Enhanced .gitignore to exclude generated files and secrets
+  - Comprehensive build documentation and guides
+  - Environment validation and setup scripts
 
 ### Technical Improvements
-- Created modular build system with proper path handling
+
+- Created modular unified build system with proper path handling
 - Implemented offline npm package source generation
 - Added development manifest for easier testing
 - Integrated with freedesktop runtime and Electron base app
+- Generated production-ready distributable packages
+- Optimized Flatpak manifest files for better performance
 
 ## [0.2.0] - 2024-12-24
 
@@ -104,6 +111,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Version History
 
+- **0.2.1** - Desktop Distribution Release (2025-06-24)
+  - Complete Flatpak packaging and desktop distribution
+  - Unified build system with automated scripts
+  - Production-ready distributable packages
+- **0.2.0** - AI Integration Release (2024-12-24)
+  - Full AI-powered workflow generation
+  - Advanced action categorization system
+  - MongoDB persistence layer
 - **0.1.0** - Alpha Release (2024-12-24)
   - First public release
   - Core functionality implemented

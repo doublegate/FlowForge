@@ -103,7 +103,7 @@ modules:
       - type: dir
         path: ../backend
         dest: backend
-      - ../generated-sources-backend.json
+      - generated-sources-backend.json
 
   # FlowForge Frontend
   - name: flowforge-frontend
@@ -124,7 +124,7 @@ modules:
       - type: dir
         path: ../frontend
         dest: frontend
-      - ../generated-sources-frontend.json
+      - generated-sources-frontend.json
 
   # Electron wrapper for FlowForge
   - name: flowforge-electron
@@ -559,7 +559,7 @@ modules:
       - cp -r * /app/flowforge-electron/
     sources:
       - type: file
-        path: ../flowforge-electron-sources.json
+        path: flowforge-electron-sources.json
         dest-filename: generated-sources-electron.json
 
   # Launcher script

@@ -1,6 +1,8 @@
 # Building FlowForge as a Flatpak
 
-This guide explains how to build FlowForge as a Flatpak package for easy distribution and sandboxed execution.
+**Last Updated**: 2025-06-24
+
+This guide explains how to build FlowForge as a Flatpak package for easy distribution and sandboxed execution. FlowForge now includes a complete unified build system for desktop distribution.
 
 ## Prerequisites
 
@@ -32,24 +34,39 @@ This guide explains how to build FlowForge as a Flatpak package for easy distrib
 
 ## Quick Build
 
-The easiest way to build and run FlowForge:
+FlowForge now includes a unified build system. The easiest way to build and run FlowForge:
 
 ```bash
+# Build distributable package (recommended)
+./scripts/build-flowforge.sh
+
+# Or build and install Flatpak directly
 ./scripts/build-flatpak.sh --install --run
 ```
 
-This script will:
+**Unified Build System Features:**
+- Single entry point with `build-flowforge.sh`
+- Automatic generation of distributable packages
+- All build scripts consolidated in `scripts/` directory
+- Enhanced error handling and validation
+- Support for both development and production builds
+
+The build scripts will:
 - Install required Flatpak runtimes
 - Generate offline sources for npm packages
 - Build the Flatpak
-- Install it locally
-- Launch FlowForge
+- Create distributable package (`flowforge-0.2.0-linux-x64.tar.gz`)
+- Optionally install and launch FlowForge
 
 ## Manual Build Process
 
 ### 1. Install Flatpak Runtimes
 
 ```bash
+# Use the automated script (recommended)
+./scripts/install-runtimes.sh
+
+# Or install manually
 flatpak install -y flathub org.freedesktop.Platform//23.08
 flatpak install -y flathub org.freedesktop.Sdk//23.08
 flatpak install -y flathub org.freedesktop.Sdk.Extension.node18//23.08
@@ -92,14 +109,21 @@ flatpak run io.github.flowforge.FlowForge
 
 ## Creating a Distributable Bundle
 
-To create a `.flatpak` file that can be shared:
+FlowForge includes automated bundle creation as part of the unified build system:
 
 ```bash
+# Create complete distributable package
+./scripts/build-flowforge.sh
+
+# Or create just the Flatpak bundle
 ./scripts/create-bundle.sh
 ```
 
-This creates `FlowForge.flatpak` which can be installed with:
+This creates both:
+- `FlowForge.flatpak` - Flatpak bundle for installation
+- `flowforge-0.2.0-linux-x64.tar.gz` - Complete distributable package
 
+Install the Flatpak bundle with:
 ```bash
 flatpak install --user FlowForge.flatpak
 ```

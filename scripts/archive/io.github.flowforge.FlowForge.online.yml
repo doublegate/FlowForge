@@ -1,0 +1,111 @@
+app-id: io.github.flowforge.FlowForge
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+base: org.electronjs.Electron2.BaseApp
+base-version: '23.08'
+command: flowforge.sh
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.portal.Documents
+
+build-options:
+  append-path: /usr/lib/sdk/node18/bin
+  env:
+    NPM_CONFIG_LOGLEVEL: info
+
+modules:
+  - name: flowforge
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: ..
+        dest: flowforge-src
+    build-commands:
+      # Setup Node.js
+      - /usr/lib/sdk/node18/install.sh
+      
+      # Build frontend
+      - cd flowforge-src/frontend && npm ci && npm run build
+      
+      # Install production dependencies for backend
+      - cd flowforge-src/backend && npm ci --omit=dev
+      
+      # Install electron
+      - cd flowforge-src/electron && npm ci --omit=dev
+      
+      # Copy everything to app directory
+      - mkdir -p /app/flowforge
+      - cp -r flowforge-src/frontend/dist /app/flowforge/frontend
+      - cp -r flowforge-src/backend /app/flowforge/backend
+      - cp -r flowforge-src/electron /app/flowforge/electron
+      
+      # Create launcher script
+      - |
+        cat > /app/bin/flowforge.sh << 'EOF'
+        #!/bin/bash
+        export ELECTRON_DISABLE_SECURITY_WARNINGS=true
+        export NODE_ENV=production
+        
+        # Setup config directory
+        CONFIG_DIR="$HOME/.var/app/io.github.flowforge.FlowForge/config"
+        mkdir -p "$CONFIG_DIR"
+        
+        if [ ! -f "$CONFIG_DIR/.env" ]; then
+            cat > "$CONFIG_DIR/.env" << 'ENVEOF'
+        # FlowForge Configuration
+        MONGODB_URI=mongodb://localhost:27017/flowforge
+        NODE_ENV=production
+        PORT=3001
+        SESSION_SECRET=$(openssl rand -base64 32)
+        
+        # Add your API keys:
+        # GITHUB_TOKEN=your_github_token
+        # OPENAI_API_KEY=your_openai_key
+        ENVEOF
+            echo "Created config at: $CONFIG_DIR/.env"
+            echo "Please add your API keys to this file."
+        fi
+        
+        # Link config
+        ln -sf "$CONFIG_DIR/.env" /app/flowforge/backend/.env
+        
+        # Start backend
+        cd /app/flowforge/backend
+        node server.js &
+        BACKEND_PID=$!
+        
+        # Wait for backend
+        sleep 3
+        
+        # Start Electron
+        cd /app/flowforge/electron
+        electron . "$@"
+        
+        # Cleanup
+        kill $BACKEND_PID 2>/dev/null
+        EOF
+      - chmod +x /app/bin/flowforge.sh
+      
+      # Desktop integration
+      - install -Dm644 flowforge-src/images/icon.png /app/share/icons/hicolor/256x256/apps/io.github.flowforge.FlowForge.png
+      - |
+        cat > /app/share/applications/io.github.flowforge.FlowForge.desktop << 'EOF'
+        [Desktop Entry]
+        Name=FlowForge
+        Comment=Visual GitHub Actions Workflow Builder
+        Exec=flowforge.sh %F
+        Icon=io.github.flowforge.FlowForge
+        Terminal=false
+        Type=Application
+        Categories=Development;IDE;
+        MimeType=text/yaml;application/x-yaml;
+        EOF
+      - desktop-file-validate /app/share/applications/io.github.flowforge.FlowForge.desktop

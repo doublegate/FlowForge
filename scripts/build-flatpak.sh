@@ -97,13 +97,13 @@ fi
 # Generate sources for backend
 echo -e "${BLUE}Generating backend sources...${NC}"
 cd "$PROJECT_ROOT/backend"
-python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$PROJECT_ROOT/generated-sources-backend.json"
+python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$SCRIPT_DIR/generated-sources-backend.json"
 cd "$PROJECT_ROOT"
 
 # Generate sources for frontend
 echo -e "${BLUE}Generating frontend sources...${NC}"
 cd "$PROJECT_ROOT/frontend"
-python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$PROJECT_ROOT/generated-sources-frontend.json"
+python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$SCRIPT_DIR/generated-sources-frontend.json"
 cd "$PROJECT_ROOT"
 
 # Create minimal Electron package.json and generate sources
@@ -123,7 +123,7 @@ EOF
 
 cd electron-temp
 npm install --package-lock-only
-python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$PROJECT_ROOT/flowforge-electron-sources.json"
+python3 "$SCRIPT_DIR/flatpak-node-generator.py" npm package-lock.json -o "$SCRIPT_DIR/flowforge-electron-sources.json"
 cd "$PROJECT_ROOT"
 rm -rf electron-temp
 

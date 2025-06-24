@@ -1,5 +1,8 @@
 # FlowForge Backlog
 
+**Last Updated**: 2025-06-24
+**Current Status**: Desktop Distribution Complete, Preparing Phase 3
+
 ## Feature Backlog
 
 ### High Priority
@@ -125,15 +128,18 @@
 - **Blockchain Integration**: Workflow verification and audit trail
 
 ### Platform Expansion
+- [x] **Desktop Distribution**: Flatpak packaging for Linux (✅ Completed 2025-06-24)
 - **Self-Hosted Version**: Enterprise on-premise deployment
 - **Cloud-Native SaaS**: Multi-tenant architecture
 - **CLI Tool**: Command-line workflow builder
 - **VS Code Extension**: IDE integration
+- **Windows/macOS Support**: Extend desktop distribution to other platforms
 
 ## Community Features
 
 ### Open Source
-- [ ] Contribution guidelines
+- [x] Contribution guidelines (✅ Exists)
+- [x] Desktop distribution ready (✅ Completed 2025-06-24)
 - [ ] Plugin architecture
 - [ ] Extension marketplace
 - [ ] Community forums

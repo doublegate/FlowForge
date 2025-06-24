@@ -1,7 +1,9 @@
 # FlowForge Technical Implementation Details
 
+**Last Updated**: 2025-06-24
+
 ## Overview
-This document provides detailed technical implementation information for FlowForge v0.2.0, including architecture decisions, integration details, and technical achievements.
+This document provides detailed technical implementation information for FlowForge v0.2.1, including architecture decisions, integration details, technical achievements, and desktop distribution capabilities.
 
 ## Core Technologies
 

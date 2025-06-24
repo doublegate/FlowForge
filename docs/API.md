@@ -1,9 +1,13 @@
 # FlowForge API Documentation
 
+**Last Updated**: 2025-06-24
+**Version**: 0.2.1
+
 ## Base URL
 ```
 Development: http://localhost:3001/api
 Production: https://api.flowforge.dev/api
+Desktop: http://localhost:3001/api (embedded in Flatpak)
 ```
 
 ## Authentication

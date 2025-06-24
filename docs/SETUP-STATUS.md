@@ -1,5 +1,7 @@
 # FlowForge Setup Status
 
+**Last Updated**: 2025-06-24
+
 ## ✅ Completed Setup Steps
 
 ### 1. Environment Configuration
@@ -22,9 +24,9 @@
   - 4 moderate vulnerabilities (can be addressed later)
   - ESLint deprecation warnings (non-critical)
 
-## 🚀 Ready to Start Development
+## 🚀 Ready for Development & Distribution
 
-### Quick Start Commands
+### Development Commands
 
 #### Option 1: Using separate terminals
 
@@ -59,6 +61,27 @@ docker-compose up -d
 1. **MongoDB**: Ensure MongoDB is running locally or update `MONGODB_URI` in `.env`
 2. **API Keys**: Add your GitHub and OpenAI API keys to `.env`
 3. **Seed Database**: Run `cd backend && npm run seed` to populate initial data
+
+## 📦 Desktop Distribution Ready
+
+### Build Commands
+
+```bash
+# Build distributable package
+./scripts/build-flowforge.sh
+
+# Build and install Flatpak
+./scripts/build-flatpak.sh --install --run
+```
+
+### Distribution Status
+
+✅ **Flatpak Packaging Complete**
+- All build scripts consolidated in `scripts/` directory
+- Unified build system with `build-flowforge.sh`
+- Generated production-ready distributable: `flowforge-0.2.0-linux-x64.tar.gz`
+- Desktop integration with file associations
+- Embedded MongoDB for self-contained deployment
 
 ## 📋 Next Development Steps
 

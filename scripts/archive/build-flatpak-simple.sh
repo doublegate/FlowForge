@@ -1,0 +1,267 @@
+#!/bin/bash
+# Simplified Flatpak build script for FlowForge
+# This version builds without offline npm sources for faster development
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+APP_ID="io.github.flowforge.FlowForge"
+BUILD_DIR="build-dir"
+REPO_DIR="repo"
+
+# Get the script directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
+# Parse command line arguments
+INSTALL=false
+RUN=false
+BUNDLE=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --install)
+            INSTALL=true
+            shift
+            ;;
+        --run)
+            RUN=true
+            INSTALL=true
+            shift
+            ;;
+        --bundle)
+            BUNDLE=true
+            shift
+            ;;
+        *)
+            echo -e "${RED}Unknown option: $1${NC}"
+            exit 1
+            ;;
+    esac
+done
+
+echo -e "${BLUE}FlowForge Flatpak Builder (Simple Mode)${NC}"
+echo "==========================================="
+
+# Create a simplified manifest
+cat > "$SCRIPT_DIR/io.github.flowforge.FlowForge.simple.yml" << 'EOF'
+app-id: io.github.flowforge.FlowForge
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.node18
+command: flowforge-launcher
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.portal.Documents
+  - --env=NODE_ENV=production
+
+modules:
+  # Node.js environment
+  - name: node
+    buildsystem: simple
+    build-commands:
+      - /usr/lib/sdk/node18/install.sh
+      - install -dm755 /app/bin
+      - cp -a /usr/lib/sdk/node18/bin/* /app/bin/
+      - cp -a /usr/lib/sdk/node18/lib/* /app/lib/
+
+  # Frontend build
+  - name: flowforge-frontend
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    sources:
+      - type: dir
+        path: ../frontend
+    build-commands:
+      - export PATH=/app/bin:$PATH
+      - npm install --no-fund --no-audit
+      - npm run build
+      - install -dm755 /app/flowforge/frontend
+      - cp -r dist/* /app/flowforge/frontend/
+
+  # Backend
+  - name: flowforge-backend  
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    sources:
+      - type: dir
+        path: ../backend
+    build-commands:
+      - export PATH=/app/bin:$PATH
+      - npm install --production --no-fund --no-audit
+      - install -dm755 /app/flowforge/backend
+      - cp -r * /app/flowforge/backend/
+
+  # Electron wrapper
+  - name: flowforge-electron
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+    sources:
+      - type: dir
+        path: ../electron
+    build-commands:
+      - export PATH=/app/bin:$PATH
+      - npm install --production --no-fund --no-audit
+      - install -dm755 /app/flowforge/electron
+      - cp -r * /app/flowforge/electron/
+
+  # Launcher script
+  - name: flowforge-launcher
+    buildsystem: simple
+    sources:
+      - type: script
+        dest-filename: flowforge-launcher
+        commands:
+          - |
+            #!/bin/bash
+            export NODE_ENV=production
+            export ELECTRON_DISABLE_SECURITY_WARNINGS=true
+            
+            # Create user data directory
+            USER_DATA="$HOME/.var/app/io.github.flowforge.FlowForge"
+            mkdir -p "$USER_DATA/config"
+            mkdir -p "$USER_DATA/data/mongodb"
+            
+            # Check for config
+            if [ ! -f "$USER_DATA/config/.env" ]; then
+                echo "Creating default configuration..."
+                cat > "$USER_DATA/config/.env" << 'ENVEOF'
+            # FlowForge Configuration
+            MONGODB_URI=mongodb://localhost:27017/flowforge
+            NODE_ENV=production
+            PORT=3001
+            FRONTEND_URL=http://localhost:5173
+            SESSION_SECRET=$(openssl rand -base64 32)
+            
+            # Add your API keys here:
+            # GITHUB_TOKEN=your_github_token
+            # OPENAI_API_KEY=your_openai_key
+            ENVEOF
+                echo "Configuration created at: $USER_DATA/config/.env"
+                echo "Please edit this file to add your API keys."
+            fi
+            
+            # Link config to backend
+            mkdir -p /tmp/flowforge-backend
+            cp -r /app/flowforge/backend/* /tmp/flowforge-backend/
+            ln -sf "$USER_DATA/config/.env" /tmp/flowforge-backend/.env
+            
+            # Start backend
+            cd /tmp/flowforge-backend
+            node server.js &
+            BACKEND_PID=$!
+            
+            # Wait for backend
+            sleep 2
+            
+            # Start Electron app
+            cd /app/flowforge/electron
+            electron main.js
+            
+            # Cleanup
+            kill $BACKEND_PID 2>/dev/null || true
+    build-commands:
+      - install -Dm755 flowforge-launcher /app/bin/flowforge-launcher
+
+  # Desktop integration
+  - name: flowforge-desktop
+    buildsystem: simple
+    sources:
+      - type: file
+        path: ../images/icon.png
+        dest-filename: io.github.flowforge.FlowForge.png
+    build-commands:
+      - install -Dm644 io.github.flowforge.FlowForge.png /app/share/icons/hicolor/256x256/apps/io.github.flowforge.FlowForge.png
+      - |
+        cat > io.github.flowforge.FlowForge.desktop << 'DEOF'
+        [Desktop Entry]
+        Name=FlowForge
+        Comment=Visual GitHub Actions Workflow Builder
+        Exec=flowforge-launcher
+        Icon=io.github.flowforge.FlowForge
+        Terminal=false
+        Type=Application
+        Categories=Development;IDE;
+        MimeType=text/yaml;application/x-yaml;
+        DEOF
+      - install -Dm644 io.github.flowforge.FlowForge.desktop /app/share/applications/io.github.flowforge.FlowForge.desktop
+EOF
+
+# Clean previous build
+echo -e "\n${YELLOW}Cleaning previous build...${NC}"
+rm -rf "$BUILD_DIR" "$REPO_DIR" .flatpak-builder
+
+# Build the Flatpak
+echo -e "\n${YELLOW}Building Flatpak...${NC}"
+cd "$PROJECT_ROOT"
+flatpak-builder --force-clean "$BUILD_DIR" "$SCRIPT_DIR/io.github.flowforge.FlowForge.simple.yml"
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✓ Build completed successfully!${NC}"
+else
+    echo -e "${RED}✗ Build failed${NC}"
+    exit 1
+fi
+
+# Install if requested
+if [ "$INSTALL" = true ]; then
+    echo -e "\n${YELLOW}Installing Flatpak...${NC}"
+    flatpak-builder --user --install --force-clean "$BUILD_DIR" "$SCRIPT_DIR/io.github.flowforge.FlowForge.simple.yml"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Installation completed!${NC}"
+    else
+        echo -e "${RED}✗ Installation failed${NC}"
+        exit 1
+    fi
+fi
+
+# Create bundle if requested
+if [ "$BUNDLE" = true ]; then
+    echo -e "\n${YELLOW}Creating bundle...${NC}"
+    flatpak-builder --repo="$REPO_DIR" --force-clean "$BUILD_DIR" "$SCRIPT_DIR/io.github.flowforge.FlowForge.simple.yml"
+    flatpak build-bundle "$REPO_DIR" FlowForge.flatpak "$APP_ID"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Bundle created: FlowForge.flatpak${NC}"
+    else
+        echo -e "${RED}✗ Bundle creation failed${NC}"
+        exit 1
+    fi
+fi
+
+# Run if requested
+if [ "$RUN" = true ]; then
+    echo -e "\n${YELLOW}Starting FlowForge...${NC}"
+    flatpak run "$APP_ID"
+fi
+
+echo -e "\n${GREEN}Done!${NC}"
+
+# Print usage instructions
+if [ "$INSTALL" = false ]; then
+    echo -e "\n${BLUE}To install and run:${NC}"
+    echo "  $0 --install --run"
+    echo -e "\n${BLUE}To create a distributable bundle:${NC}"
+    echo "  $0 --bundle"
+fi

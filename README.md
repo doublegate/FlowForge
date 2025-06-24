@@ -2,13 +2,11 @@
 # FlowForge
 
 <p align="center">
-  <a href="images/FlowForge_logo.html">
-    <img src="https://via.placeholder.com/300x300/0d1117/58a6ff?text=FlowForge" alt="FlowForge Logo">
-  </a>
+  <img src="images/flowforge-logo.png" alt="FlowForge Logo" width="300">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.2.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.2.1-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
   <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status">
@@ -28,8 +26,9 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 - 💾 **Workflow Persistence** - Save and load workflows from MongoDB
 - 🏷️ **Advanced Categorization** - 14 intelligent categories for easy action discovery
 - 🔄 **Full CRUD Operations** - Create, read, update, and delete workflows
-- 📦 **Desktop Distribution** - Flatpak support for Linux desktop deployment
-- 🖥️ **Native Desktop App** - Electron wrapper for desktop experience
+- 📦 **Desktop Distribution** - Complete Flatpak packaging for Linux deployment
+- 🖥️ **Native Desktop App** - Electron wrapper with embedded MongoDB
+- 🔧 **Unified Build System** - Automated build scripts for all platforms
 
 ## 🚀 Quick Start
 
@@ -82,11 +81,15 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
    - Frontend: <http://localhost:5173>
    - API: <http://localhost:3001>
 
-### Flatpak Build
+### Desktop Build
 
-FlowForge can also be built as a Flatpak for easy distribution:
+FlowForge can be built as a desktop application using our unified build system:
 
 ```bash
+# Build distributable package
+./scripts/build-flowforge.sh
+
+# Build and install Flatpak
 ./scripts/build-flatpak.sh --install --run
 ```
 
@@ -141,7 +144,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Status
 
-FlowForge is currently in **beta**. Core features including AI integration are complete and we're preparing for enterprise features!
+FlowForge is currently in **beta**. Core features including AI integration and desktop distribution are complete! We're now preparing for enterprise features.
 
 ### Roadmap
 
@@ -160,7 +163,7 @@ FlowForge is currently in **beta**. Core features including AI integration are c
   - [x] Embedded MongoDB for self-contained deployment
   - [x] Automated build scripts
 - [ ] Phase 3: Enterprise features and marketplace (next)
-- [ ] Phase 4: Multi-platform support
+- [ ] Phase 4: Multi-platform support (Windows, macOS)
 
 ## 💬 Support
 
@@ -175,9 +178,7 @@ FlowForge is currently in **beta**. Core features including AI integration are c
 ---
 
 <p align="center">
-  <a href="images/FlowForge_banner.html">
-    <img src="https://via.placeholder.com/1200x400/0d1117/58a6ff?text=FlowForge+Banner" alt="FlowForge Banner">
-  </a>
+  <img src="images/flowforge-banner.png" alt="FlowForge Banner" width="800">
 </p>
 
 <p align="center">Made with ❤️ by the FlowForge Team</p>

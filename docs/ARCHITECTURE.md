@@ -1,12 +1,15 @@
 # FlowForge Architecture
 
+**Last Updated**: 2025-06-24
+
 ## Overview
 
-FlowForge is a full-stack web application built with a modern microservices-oriented architecture. The system is divided into three main components:
+FlowForge is a full-stack web application built with a modern microservices-oriented architecture, now available as both a web application and desktop distribution. The system is divided into four main components:
 
 1. **Frontend**: React-based SPA with visual workflow builder
 2. **Backend**: Express.js REST API with MongoDB persistence
-3. **External Services**: GitHub API, OpenAI API, and actionlint
+3. **Desktop Distribution**: Flatpak packaging with Electron wrapper
+4. **External Services**: GitHub API, OpenAI API, and actionlint
 
 ## System Architecture
 

@@ -1,0 +1,47 @@
+{
+  "@monaco-editor/react": {
+    "wanted": "4.7.0",
+    "latest": "4.7.0",
+    "dependent": "frontend"
+  },
+  "axios": {
+    "wanted": "1.13.2",
+    "latest": "1.13.2",
+    "dependent": "frontend"
+  },
+  "js-yaml": {
+    "wanted": "4.1.1",
+    "latest": "4.1.1",
+    "dependent": "frontend"
+  },
+  "lucide-react": {
+    "wanted": "0.303.0",
+    "latest": "0.554.0",
+    "dependent": "frontend"
+  },
+  "react": {
+    "wanted": "18.3.1",
+    "latest": "19.2.0",
+    "dependent": "frontend"
+  },
+  "react-dom": {
+    "wanted": "18.3.1",
+    "latest": "19.2.0",
+    "dependent": "frontend"
+  },
+  "react-hot-toast": {
+    "wanted": "2.6.0",
+    "latest": "2.6.0",
+    "dependent": "frontend"
+  },
+  "reactflow": {
+    "wanted": "11.11.4",
+    "latest": "11.11.4",
+    "dependent": "frontend"
+  },
+  "zustand": {
+    "wanted": "4.5.7",
+    "latest": "5.0.8",
+    "dependent": "frontend"
+  }
+}

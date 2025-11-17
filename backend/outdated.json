@@ -1,0 +1,67 @@
+{
+  "@octokit/rest": {
+    "wanted": "20.1.2",
+    "latest": "21.1.1",
+    "dependent": "backend"
+  },
+  "actionlint": {
+    "wanted": "2.0.6",
+    "latest": "2.0.6",
+    "dependent": "backend"
+  },
+  "cors": {
+    "wanted": "2.8.5",
+    "latest": "2.8.5",
+    "dependent": "backend"
+  },
+  "dotenv": {
+    "wanted": "16.6.1",
+    "latest": "17.2.3",
+    "dependent": "backend"
+  },
+  "express": {
+    "wanted": "4.21.2",
+    "latest": "5.1.0",
+    "dependent": "backend"
+  },
+  "express-rate-limit": {
+    "wanted": "7.5.1",
+    "latest": "8.2.1",
+    "dependent": "backend"
+  },
+  "helmet": {
+    "wanted": "7.2.0",
+    "latest": "8.1.0",
+    "dependent": "backend"
+  },
+  "js-yaml": {
+    "wanted": "4.1.1",
+    "latest": "4.1.1",
+    "dependent": "backend"
+  },
+  "lru-cache": {
+    "wanted": "10.4.3",
+    "latest": "10.4.3",
+    "dependent": "backend"
+  },
+  "mongoose": {
+    "wanted": "8.19.4",
+    "latest": "8.19.4",
+    "dependent": "backend"
+  },
+  "morgan": {
+    "wanted": "1.10.1",
+    "latest": "1.10.1",
+    "dependent": "backend"
+  },
+  "openai": {
+    "wanted": "4.104.0",
+    "latest": "6.9.0",
+    "dependent": "backend"
+  },
+  "uuid": {
+    "wanted": "11.1.0",
+    "latest": "13.0.0",
+    "dependent": "backend"
+  }
+}

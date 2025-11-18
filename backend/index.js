@@ -34,6 +34,9 @@ const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Import route modules
+const authRoutes = require('./routes/auth');
+
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
@@ -157,7 +160,7 @@ const WorkflowTemplate = mongoose.model('WorkflowTemplate', WorkflowTemplateSche
 const WorkflowSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  userId: String, // For future user authentication
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Owner of the workflow
   nodes: [{
     id: String,
     type: String,
@@ -180,6 +183,10 @@ const WorkflowSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add indexes for performance
+WorkflowSchema.index({ userId: 1, createdAt: -1 });
+WorkflowSchema.index({ isPublic: 1, createdAt: -1 });
 
 const Workflow = mongoose.model('Workflow', WorkflowSchema);
 
@@ -720,6 +727,12 @@ async function validateWorkflow(yamlContent) {
 }
 
 // API Routes
+
+/**
+ * Authentication Routes
+ * Handle user registration, login, and token management
+ */
+app.use('/api/auth', authRoutes);
 
 /**
  * GET /api/actions

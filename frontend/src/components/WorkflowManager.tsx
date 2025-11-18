@@ -134,47 +134,103 @@ export const WorkflowManager: React.FC<WorkflowManagerProps> = ({
   };
 
   const generateYamlFromFlow = (nodes: FlowNode[], edges: FlowEdge[]) => {
-    // Group nodes by job (using position or custom grouping logic)
-    // For now, we'll create jobs based on node connections
+    /**
+     * Enhanced Multi-Job Workflow Generation Algorithm
+     *
+     * Strategy:
+     * 1. Group connected nodes into jobs
+     * 2. Nodes without dependencies start new jobs
+     * 3. When multiple jobs feed into a node, create a new job with 'needs' dependencies
+     * 4. Sequential nodes within a job become steps
+     * 5. Parallel branches become separate jobs
+     */
+
     const jobs: Record<string, Record<string, unknown>> = {};
     const nodeToJob: Record<string, string> = {};
     const jobDependencies: Record<string, string[]> = {};
-    
-    // Simple algorithm: nodes without incoming edges start new jobs
-    // Connected nodes belong to the same job
+
+    // Build adjacency maps for analysis
+    const incomingEdgesMap: Record<string, FlowEdge[]> = {};
+    const outgoingEdgesMap: Record<string, FlowEdge[]> = {};
+
+    nodes.forEach(node => {
+      incomingEdgesMap[node.id] = [];
+      outgoingEdgesMap[node.id] = [];
+    });
+
+    edges.forEach(edge => {
+      incomingEdgesMap[edge.target].push(edge);
+      outgoingEdgesMap[edge.source].push(edge);
+    });
+
     let jobCounter = 1;
-    
-    // First pass: assign nodes to jobs
-    nodes.forEach((node) => {
-      const incomingEdges = edges.filter(e => e.target === node.id);
-      // const outgoingEdges = edges.filter(e => e.source === node.id);
-      
+
+    // Topological sort to process nodes in dependency order
+    const visited = new Set<string>();
+    const processNode = (node: FlowNode): void => {
+      if (visited.has(node.id)) return;
+      visited.add(node.id);
+
+      const incomingEdges = incomingEdgesMap[node.id];
+      const outgoingEdges = outgoingEdgesMap[node.id];
+
       if (incomingEdges.length === 0) {
-        // Start of a new job chain
+        // Root node - start new job
         const jobName = `job_${jobCounter++}`;
         nodeToJob[node.id] = jobName;
       } else {
-        // Check if source nodes are in different jobs
+        // Get source jobs
         const sourceJobs = new Set(
           incomingEdges
-            .map(e => nodeToJob[edges.find(edge => edge.id === e.id)?.source || ''])
+            .map(e => nodeToJob[e.source])
             .filter(Boolean)
         );
-        
-        if (sourceJobs.size > 1) {
-          // Multiple jobs feed into this node - create new job
+
+        if (sourceJobs.size === 0) {
+          // No source jobs assigned yet (shouldn't happen with topological sort)
           const jobName = `job_${jobCounter++}`;
           nodeToJob[node.id] = jobName;
-          // Track dependencies
-          jobDependencies[jobName] = Array.from(sourceJobs);
         } else if (sourceJobs.size === 1) {
-          // Continue in the same job
-          nodeToJob[node.id] = Array.from(sourceJobs)[0];
+          // Single source job - check if we should continue in same job or create new one
+          const sourceJob = Array.from(sourceJobs)[0];
+
+          // Check if source has multiple outgoing edges (branching)
+          const sourceNodeId = incomingEdges[0].source;
+          const sourceOutgoingCount = outgoingEdgesMap[sourceNodeId].length;
+
+          if (sourceOutgoingCount > 1) {
+            // Branching point - create new job for each branch
+            const jobName = `job_${jobCounter++}`;
+            nodeToJob[node.id] = jobName;
+            jobDependencies[jobName] = [sourceJob];
+          } else {
+            // Sequential - continue in same job
+            nodeToJob[node.id] = sourceJob;
+          }
         } else {
-          // Fallback - create new job
+          // Multiple source jobs - create new job that depends on all sources
           const jobName = `job_${jobCounter++}`;
           nodeToJob[node.id] = jobName;
+          jobDependencies[jobName] = Array.from(sourceJobs);
         }
+      }
+
+      // Process dependent nodes
+      outgoingEdges.forEach(edge => {
+        const targetNode = nodes.find(n => n.id === edge.target);
+        if (targetNode) processNode(targetNode);
+      });
+    };
+
+    // Start processing from root nodes (no incoming edges)
+    const rootNodes = nodes.filter(n => incomingEdgesMap[n.id].length === 0);
+    rootNodes.forEach(processNode);
+
+    // Process any remaining unvisited nodes (isolated nodes)
+    nodes.forEach(node => {
+      if (!nodeToJob[node.id]) {
+        const jobName = `job_${jobCounter++}`;
+        nodeToJob[node.id] = jobName;
       }
     });
     

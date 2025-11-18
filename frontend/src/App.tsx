@@ -28,9 +28,10 @@ const FlowForge = () => {
   const [, setCurrentAction] = useState<ActionMetadata | null>(null);
 
   // Handle AI workflow generation
-  const handleAIWorkflowGenerated = useCallback((aiResponse: WorkflowGenerationResponse) => {
+  const handleAIWorkflowGenerated = useCallback((_aiResponse: WorkflowGenerationResponse) => {
     // Successfully generated AI workflow
     // The Canvas component will handle the workflow loading
+    // Future: Could use aiResponse here to show statistics or additional UI feedback
   }, []);
 
   // Handle workflow save

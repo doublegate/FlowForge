@@ -127,9 +127,122 @@ export interface SavedWorkflow {
 
 // AI Suggestion Types
 export interface AISuggestion {
-  type: 'optimization' | 'security' | 'best-practice' | 'performance';
+  type: 'optimization' | 'security' | 'best-practice' | 'performance' | 'cost' | 'reliability' | 'feature';
   title: string;
   description: string;
   impact: 'low' | 'medium' | 'high';
+  priority?: 'high' | 'medium' | 'low';
   implementation?: string;
+}
+
+// Technology Detection Types
+export interface TechnologyInfo {
+  name: string;
+  category: 'language' | 'framework' | 'platform' | 'tool';
+  keywords: string[];
+  related: string[];
+}
+
+export interface ActionWithTechnology extends ActionMetadata {
+  technologies?: string[];
+  techCategory?: string;
+}
+
+// Enhanced Validation Types
+export interface ValidationWarning {
+  line: number;
+  column: number;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+  rule?: string;
+  suggestion?: string;
+}
+
+export interface EnhancedValidationResponse {
+  isValid: boolean;
+  errors: ValidationWarning[];
+  warnings: ValidationWarning[];
+  suggestions: string[];
+  stats?: {
+    totalSteps: number;
+    estimatedTime: string;
+    complexity: 'low' | 'medium' | 'high';
+  };
+}
+
+// Workflow Job Structure Types
+export interface WorkflowJob {
+  name: string;
+  'runs-on': string | string[];
+  needs?: string | string[];
+  steps: WorkflowStep[];
+  strategy?: {
+    matrix?: Record<string, unknown>;
+    'fail-fast'?: boolean;
+    'max-parallel'?: number;
+  };
+  environment?: string | {
+    name: string;
+    url?: string;
+  };
+  'timeout-minutes'?: number;
+  permissions?: Record<string, string>;
+  services?: Record<string, unknown>;
+}
+
+export interface WorkflowStep {
+  name?: string;
+  uses?: string;
+  run?: string;
+  with?: Record<string, string | number | boolean>;
+  env?: Record<string, string>;
+  id?: string;
+  if?: string;
+  'continue-on-error'?: boolean;
+  'timeout-minutes'?: number;
+}
+
+export interface WorkflowDefinition {
+  name: string;
+  on: string | string[] | Record<string, unknown>;
+  jobs: Record<string, WorkflowJob>;
+  env?: Record<string, string>;
+  permissions?: Record<string, string>;
+  concurrency?: {
+    group: string;
+    'cancel-in-progress'?: boolean;
+  };
+}
+
+// Edge Analysis Types
+export interface EdgeAnalysis {
+  parallelizableJobs: string[][];
+  bottlenecks: string[];
+  criticalPath: string[];
+  suggestions: string[];
+  dependencies: Record<string, string[]>;
+}
+
+// API Response Wrapper Types
+export interface APIResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  timestamp?: string;
+}
+
+export interface APIError {
+  success: false;
+  error: string;
+  message: string;
+  details?: unknown;
+  timestamp: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
 }

@@ -527,37 +527,84 @@ Please ensure the workflow includes:
  */
 async function validateWorkflow(yamlContent) {
   const execFileAsync = promisify(execFile);
-  
+
   // Input validation and sanitization
   if (typeof yamlContent !== 'string') {
     return {
       valid: false,
-      errors: ['Invalid YAML content: must be a string']
+      errors: [{ message: 'Invalid YAML content: must be a string', severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Limit YAML size to prevent DoS
   if (yamlContent.length > 100000) { // 100KB limit
     return {
       valid: false,
-      errors: ['YAML content too large (max 100KB)']
+      errors: [{ message: 'YAML content too large (max 100KB)', severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Basic YAML structure validation
   try {
     yaml.load(yamlContent);
   } catch (yamlError) {
     return {
       valid: false,
-      errors: [`Invalid YAML syntax: ${yamlError.message}`]
+      errors: [{ message: `Invalid YAML syntax: ${yamlError.message}`, severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Generate secure temp filename with random suffix
   const randomSuffix = Math.random().toString(36).substring(2, 15);
   const tempFile = path.join(__dirname, `temp_workflow_${Date.now()}_${randomSuffix}.yml`);
-  
+
+  /**
+   * Parse actionlint output line
+   * Format: filename:line:col: message [rule-name]
+   */
+  const parseActionlintLine = (line) => {
+    if (!line.trim()) return null;
+
+    // Match pattern: filename:line:col: message [rule-name]
+    const match = line.match(/^(.+?):(\d+):(\d+):\s*(.+?)(?:\s+\[(.+?)\])?$/);
+
+    if (match) {
+      const [, , lineNum, colNum, message, rule] = match;
+
+      // Determine severity based on keywords
+      let severity = 'warning';
+      const lowerMessage = message.toLowerCase();
+
+      if (lowerMessage.includes('error') || lowerMessage.includes('invalid') || lowerMessage.includes('required')) {
+        severity = 'error';
+      } else if (lowerMessage.includes('deprecated') || lowerMessage.includes('recommend') || lowerMessage.includes('should')) {
+        severity = 'info';
+      }
+
+      return {
+        line: parseInt(lineNum),
+        column: parseInt(colNum),
+        message: message.trim(),
+        severity,
+        rule: rule || undefined
+      };
+    }
+
+    // Fallback for unformatted lines
+    return {
+      line: 0,
+      column: 0,
+      message: line.trim(),
+      severity: 'warning'
+    };
+  };
+
   try {
     // Sanitize YAML content before writing - remove control characters
     const sanitizedContent = yamlContent
@@ -567,29 +614,46 @@ async function validateWorkflow(yamlContent) {
         return code >= 32 || code === 9 || code === 10 || code === 13;
       }).join('')
       .substring(0, 100000); // Enforce size limit
-    
+
     // Write YAML to temporary file
     await fs.writeFile(tempFile, sanitizedContent, { mode: 0o600 }); // Restrict file permissions
-    
+
     // Run actionlint using execFile for security (prevents shell injection)
-    const { stderr } = await execFileAsync('actionlint', [tempFile], {
+    // Use -format option for structured output
+    const { stdout, stderr } = await execFileAsync('actionlint', ['-format', '{{range $ }}{{$.filepath}}:{{$.line}}:{{$.column}}: {{$.message}} [{{$.kind}}]{{"\n"}}{{end}}', tempFile], {
       timeout: 10000, // 10 second timeout
       maxBuffer: 1024 * 1024 // 1MB max output
     });
-    
+
     // Clean up temp file
     await fs.unlink(tempFile);
-    
-    if (stderr) {
-      return {
-        valid: false,
-        errors: stderr.split('\n').filter(line => line.trim())
-      };
-    }
-    
+
+    // Parse output
+    const errors = [];
+    const warnings = [];
+    const suggestions = [];
+
+    // Process stdout (actionlint outputs to stdout)
+    const outputLines = (stdout || stderr || '').split('\n').filter(line => line.trim());
+
+    outputLines.forEach(line => {
+      const parsed = parseActionlintLine(line);
+      if (parsed) {
+        if (parsed.severity === 'error') {
+          errors.push(parsed);
+        } else if (parsed.severity === 'info') {
+          suggestions.push(parsed.message);
+        } else {
+          warnings.push(parsed);
+        }
+      }
+    });
+
     return {
-      valid: true,
-      errors: []
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      suggestions
     };
   } catch (error) {
     // Clean up temp file on error
@@ -599,30 +663,58 @@ async function validateWorkflow(yamlContent) {
       // Log cleanup error but don't throw - the main error is more important
       console.debug(`Failed to clean up temp file ${tempFile}: ${cleanupError.message}`);
     }
-    
+
     // Handle different types of errors
     if (error.code === 'ENOENT') {
       return {
         valid: false,
-        errors: ['actionlint not found - please install actionlint binary']
+        errors: [{ message: 'actionlint not found - please install actionlint binary', severity: 'error' }],
+        warnings: [],
+        suggestions: []
       };
     }
-    
+
     if (error.killed || error.signal === 'SIGTERM') {
       return {
         valid: false,
-        errors: ['Validation timeout - YAML file too complex']
+        errors: [{ message: 'Validation timeout - YAML file too complex', severity: 'error' }],
+        warnings: [],
+        suggestions: []
       };
     }
-    
-    // Parse actionlint errors from stdout
-    const errors = error.stdout ? 
-      error.stdout.split('\n').filter(line => line.trim()) : 
-      [`Validation error: ${error.message}`];
-    
+
+    // Parse actionlint errors/warnings from stdout
+    const errors = [];
+    const warnings = [];
+    const suggestions = [];
+
+    if (error.stdout || error.stderr) {
+      const outputLines = ((error.stdout || '') + (error.stderr || '')).split('\n').filter(line => line.trim());
+
+      outputLines.forEach(line => {
+        const parsed = parseActionlintLine(line);
+        if (parsed) {
+          if (parsed.severity === 'error') {
+            errors.push(parsed);
+          } else if (parsed.severity === 'info') {
+            suggestions.push(parsed.message);
+          } else {
+            warnings.push(parsed);
+          }
+        }
+      });
+    }
+
+    // If no parsed errors, add generic error
+    if (errors.length === 0 && warnings.length === 0) {
+      errors.push({ message: `Validation error: ${error.message}`, severity: 'error', line: 0, column: 0 });
+    }
+
     return {
       valid: false,
-      errors
+      errors,
+      warnings,
+      suggestions
     };
   }
 }

@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.3.3-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.3.4-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node Version">
   <img src="https://img.shields.io/badge/status-stable-green.svg" alt="Status">
@@ -16,23 +16,42 @@ FlowForge is a powerful visual workflow builder for GitHub Actions that combines
 
 ## ✨ Features
 
+### Core Features
 - 🎨 **Visual Workflow Builder** - Intuitive drag-and-drop interface powered by React Flow
 - 🤖 **AI-Powered Generation** - Natural language to workflow conversion using OpenAI GPT-4
 - 📚 **Action Discovery** - Browse and search 500+ GitHub Actions with intelligent categorization
-- ✅ **Real-time Validation** - Instant YAML validation with actionlint
-- 🚀 **Smart Optimization** - AI-powered suggestions for faster, more efficient workflows
-- 📝 **Template Library** - Pre-built workflows for common scenarios
+- ✅ **Real-time Validation** - Instant YAML validation with enhanced error/warning feedback
 - 🔍 **Live YAML Preview** - See generated YAML in real-time with syntax highlighting
 - 💾 **Workflow Persistence** - Save and load workflows from MongoDB
-- 🏷️ **Advanced Categorization** - 14 intelligent categories for easy action discovery
 - 🔄 **Full CRUD Operations** - Create, read, update, and delete workflows
+
+### Advanced Features (NEW in v0.3.4)
+- 🔀 **Multi-Job Workflow Generation** - Intelligent job grouping with automatic dependency tracking
+- 📊 **Edge Analysis & Optimization** - Detects parallelization opportunities and bottlenecks
+- ⚡ **Performance Suggestions** - AI identifies workflow optimization opportunities
+- 🎯 **Critical Path Detection** - Find and optimize the longest execution chains
+- 🔍 **Isolated Node Detection** - Identifies disconnected workflow components
+- 📋 **Enhanced Validation** - Structured errors, warnings, and suggestions with line numbers
+- 🏗️ **TypeScript Type System** - 11+ comprehensive interfaces for full type safety
+
+### Workflow Intelligence
+- 🚀 **Smart Optimization** - AI-powered suggestions for faster, more efficient workflows
+- 📝 **Template Library** - Pre-built workflows for common scenarios
+- 🏷️ **Advanced Categorization** - 14 intelligent categories for easy action discovery
+- 🌳 **Dependency Analysis** - BFS/DFS algorithms for workflow structure analysis
+- 🔄 **Topological Sorting** - Ensures correct processing order in complex workflows
+
+### Desktop & Distribution
 - 📦 **Desktop Distribution** - Complete Flatpak packaging for Linux deployment
 - 🖥️ **Native Desktop App** - Electron wrapper with embedded MongoDB
 - 🔧 **Unified Build System** - Automated build scripts for all platforms
-- 🚀 **CI/CD Pipeline** - Comprehensive GitHub Actions with advanced caching
+
+### Security & Quality
 - 🔒 **Security Hardened** - Comprehensive input validation and injection protection
 - 🛡️ **Security Scanning** - Automated vulnerability detection with CodeQL
 - 📊 **Performance Monitoring** - Lighthouse CI with accessibility testing
+- 🚀 **CI/CD Pipeline** - Comprehensive GitHub Actions with advanced caching
+- ✅ **Zero Vulnerabilities** - All security issues resolved in latest release
 
 ## 🚀 Quick Start
 

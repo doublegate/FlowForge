@@ -1,6 +1,6 @@
 {
   "name": "flowforge-backend",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Backend API for FlowForge - GitHub Actions Workflow Builder",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,21 @@
     "seed": "node seed.js",
     "update-actions": "node scripts/updateActions.js",
     "test": "jest",
-    "lint": "eslint ."
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "validate-env": "node utils/validateEnv.js",
+    "health": "curl http://localhost:3002/api/health || echo 'Server not running'",
+    "logs": "tail -f ../logs/application-$(date +%Y-%m-%d).log",
+    "logs:error": "tail -f ../logs/error-$(date +%Y-%m-%d).log",
+    "backup": "bash ../scripts/backup.sh",
+    "restore": "bash ../scripts/restore.sh",
+    "security-audit": "bash ../scripts/security-audit.sh",
+    "deploy": "bash ../scripts/deploy.sh",
+    "rollback": "bash ../scripts/rollback.sh",
+    "docker:build": "docker build -f Dockerfile.prod -t flowforge-backend:latest .",
+    "docker:run": "docker run -p 3002:3002 --env-file .env flowforge-backend:latest"
   },
   "keywords": [
     "github-actions",
@@ -37,7 +51,9 @@
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
     "openai": "^4.24.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winston": "^3.18.3",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

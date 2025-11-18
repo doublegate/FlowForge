@@ -34,6 +34,11 @@ const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Import utilities
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+const errorLogger = require('./middleware/errorLogger');
+
 // Import route modules
 const authRoutes = require('./routes/auth');
 
@@ -55,13 +60,13 @@ const octokit = new Octokit({
 
 // Log GitHub authentication status
 if (!githubToken) {
-  console.warn('WARNING: No GitHub token provided. API requests will be rate limited to 60/hour.');
+  logger.warn('No GitHub token provided. API requests will be rate limited to 60/hour.');
 } else if (githubToken.startsWith('ghp_')) {
-  console.log('GitHub token detected (personal access token)');
+  logger.info('GitHub token detected (personal access token)');
 } else if (githubToken.startsWith('ghs_')) {
-  console.log('GitHub token detected (OAuth app token)');
+  logger.info('GitHub token detected (OAuth app token)');
 } else {
-  console.warn('WARNING: GitHub token format may be invalid');
+  logger.warn('GitHub token format may be invalid');
 }
 
 const openai = new OpenAI({
@@ -72,7 +77,7 @@ const openai = new OpenAI({
 app.use(helmet()); // Security headers
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON bodies
-app.use(morgan('combined')); // Logging
+app.use(requestLogger); // Request logging with Winston
 
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
@@ -1342,8 +1347,8 @@ app.get('/api/github/test', async (req, res) => {
 app.post('/api/actions/update', async (req, res) => {
   try {
     // Start the update in the background
-    updateActionDatabase().catch(console.error);
-    
+    updateActionDatabase().catch(err => logger.logError(err, { operation: 'updateActionDatabase' }));
+
     res.json({
       message: 'Action database update started',
       hint: 'Check server logs for progress'
@@ -1356,59 +1361,87 @@ app.post('/api/actions/update', async (req, res) => {
   }
 });
 
+// Error handling middleware (must be after all routes)
+app.use(errorLogger);
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+
+  res.status(statusCode).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  logger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`, {
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.originalUrl} not found`
+  });
+});
+
 // Initialize server
 async function startServer() {
   try {
     // Wait for MongoDB connection FIRST
     await mongoose.connection.asPromise();
-    console.log('Connected to MongoDB');
+    logger.info('Connected to MongoDB');
 
     // Only start server AFTER database is confirmed working
     server = app.listen(PORT, (err) => {
       if (err) {
-        console.error('Failed to start server:', err);
+        logger.error('Failed to start server', err);
         process.exit(1);
       }
-      console.log(`FlowForge API server running on port ${PORT}`);
-      console.log(`Server PID: ${process.pid}`);
+      logger.info(`FlowForge API server running on port ${PORT}`);
+      logger.info(`Server PID: ${process.pid}`);
     });
 
     // Schedule periodic updates (every 6 hours)
-    setInterval(updateActionDatabase, 6 * 60 * 60 * 1000);
+    setInterval(() => {
+      updateActionDatabase().catch(err => logger.logError(err, { operation: 'scheduledUpdate' }));
+    }, 6 * 60 * 60 * 1000);
 
     // Perform initial update if database is empty
     const actionCount = await Action.countDocuments();
     if (actionCount === 0) {
-      console.log('Database is empty, performing initial update...');
-      updateActionDatabase();
+      logger.info('Database is empty, performing initial update...');
+      updateActionDatabase().catch(err => logger.logError(err, { operation: 'initialUpdate' }));
     }
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', error);
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} received, starting graceful shutdown...`);
-  
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
   // Stop accepting new connections
   if (server) {
-    console.log('Closing HTTP server...');
+    logger.info('Closing HTTP server...');
     await new Promise((resolve) => {
       server.close(resolve);
     });
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
   }
-  
+
   // Close database connection
   if (mongoose.connection.readyState === 1) {
-    console.log('Closing MongoDB connection...');
+    logger.info('Closing MongoDB connection...');
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    logger.info('MongoDB connection closed');
   }
-  
-  console.log('Graceful shutdown complete');
+
+  logger.info('Graceful shutdown complete');
   process.exit(0);
 };
 

@@ -1,0 +1,73 @@
+{
+  "name": "Python CI with Testing",
+  "description": "Continuous integration for Python projects with pytest, flake8, and type checking",
+  "category": "python",
+  "tags": ["python", "pytest", "flake8", "mypy", "testing"],
+  "difficulty": "beginner",
+  "yaml": "name: Python CI\n\non:\n  push:\n    branches: [main, develop]\n  pull_request:\n    branches: [main]\n\nenv:\n  PYTHON_VERSION: '3.11'\n\njobs:\n  quality:\n    name: Code Quality Checks\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Python\n        uses: actions/setup-python@v4\n        with:\n          python-version: ${{ env.PYTHON_VERSION }}\n          cache: 'pip'\n\n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install flake8 black mypy pytest pytest-cov\n          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi\n\n      - name: Check formatting with Black\n        run: black --check .\n\n      - name: Lint with flake8\n        run: |\n          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics\n          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics\n\n      - name: Type check with mypy\n        run: mypy . --ignore-missing-imports\n        continue-on-error: true\n\n  test:\n    name: Run Tests\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        python-version: ['3.9', '3.10', '3.11', '3.12']\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Python ${{ matrix.python-version }}\n        uses: actions/setup-python@v4\n        with:\n          python-version: ${{ matrix.python-version }}\n          cache: 'pip'\n\n      - name: Install dependencies\n        run: |\n          python -m pip install --upgrade pip\n          pip install pytest pytest-cov\n          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi\n\n      - name: Run tests with coverage\n        run: pytest --cov=. --cov-report=xml --cov-report=term\n\n      - name: Upload coverage to Codecov\n        uses: codecov/codecov-action@v3\n        if: matrix.python-version == '3.11'\n        with:\n          files: ./coverage.xml\n          flags: unittests\n\n  security:\n    name: Security Scan\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Run Bandit security scanner\n        uses: PyCQA/bandit@main\n        with:\n          path: '.'\n",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "action",
+      "position": {"x": 250, "y": 50},
+      "data": {
+        "name": "Checkout code",
+        "repository": "actions/checkout@v4",
+        "category": "setup"
+      }
+    },
+    {
+      "id": "2",
+      "type": "action",
+      "position": {"x": 250, "y": 170},
+      "data": {
+        "name": "Setup Python",
+        "repository": "actions/setup-python@v4",
+        "category": "setup",
+        "inputs": {
+          "python-version": "3.11",
+          "cache": "pip"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "action",
+      "position": {"x": 250, "y": 290},
+      "data": {
+        "name": "Install dependencies",
+        "repository": "run",
+        "category": "build",
+        "command": "python -m pip install --upgrade pip && pip install -r requirements.txt"
+      }
+    },
+    {
+      "id": "4",
+      "type": "action",
+      "position": {"x": 100, "y": 410},
+      "data": {
+        "name": "Run flake8",
+        "repository": "run",
+        "category": "test",
+        "command": "flake8 ."
+      }
+    },
+    {
+      "id": "5",
+      "type": "action",
+      "position": {"x": 400, "y": 410},
+      "data": {
+        "name": "Run pytest",
+        "repository": "run",
+        "category": "test",
+        "command": "pytest --cov=. --cov-report=xml"
+      }
+    }
+  ],
+  "edges": [
+    {"id": "e1-2", "source": "1", "target": "2"},
+    {"id": "e2-3", "source": "2", "target": "3"},
+    {"id": "e3-4", "source": "3", "target": "4"},
+    {"id": "e3-5", "source": "3", "target": "5"}
+  ]
+}

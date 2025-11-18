@@ -1,0 +1,64 @@
+{
+  "name": "Docker Build and Push",
+  "description": "Build Docker images and push to GitHub Container Registry (GHCR)",
+  "category": "docker",
+  "tags": ["docker", "container", "ghcr", "registry", "image"],
+  "difficulty": "intermediate",
+  "yaml": "name: Docker Build and Push\n\non:\n  push:\n    branches: [main]\n    tags: ['v*.*.*']\n  pull_request:\n    branches: [main]\n  workflow_dispatch:\n\nenv:\n  REGISTRY: ghcr.io\n  IMAGE_NAME: ${{ github.repository }}\n\njobs:\n  build:\n    name: Build and Push Docker Image\n    runs-on: ubuntu-latest\n    permissions:\n      contents: read\n      packages: write\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Set up QEMU\n        uses: docker/setup-qemu-action@v3\n\n      - name: Set up Docker Buildx\n        uses: docker/setup-buildx-action@v3\n\n      - name: Log in to Container Registry\n        uses: docker/login-action@v3\n        with:\n          registry: ${{ env.REGISTRY }}\n          username: ${{ github.actor }}\n          password: ${{ secrets.GITHUB_TOKEN }}\n\n      - name: Extract metadata\n        id: meta\n        uses: docker/metadata-action@v5\n        with:\n          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\n          tags: |\n            type=ref,event=branch\n            type=ref,event=pr\n            type=semver,pattern={{version}}\n            type=semver,pattern={{major}}.{{minor}}\n            type=sha,prefix={{branch}}-\n\n      - name: Build and push Docker image\n        uses: docker/build-push-action@v5\n        with:\n          context: .\n          platforms: linux/amd64,linux/arm64\n          push: ${{ github.event_name != 'pull_request' }}\n          tags: ${{ steps.meta.outputs.tags }}\n          labels: ${{ steps.meta.outputs.labels }}\n          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache\n          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max\n\n      - name: Run Trivy vulnerability scanner\n        uses: aquasecurity/trivy-action@master\n        if: github.event_name != 'pull_request'\n        with:\n          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}\n          format: 'sarif'\n          output: 'trivy-results.sarif'\n\n      - name: Upload Trivy results to GitHub Security\n        uses: github/codeql-action/upload-sarif@v2\n        if: github.event_name != 'pull_request'\n        with:\n          sarif_file: 'trivy-results.sarif'\n",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "action",
+      "position": {"x": 250, "y": 50},
+      "data": {
+        "name": "Checkout code",
+        "repository": "actions/checkout@v4",
+        "category": "setup"
+      }
+    },
+    {
+      "id": "2",
+      "type": "action",
+      "position": {"x": 250, "y": 170},
+      "data": {
+        "name": "Set up Docker Buildx",
+        "repository": "docker/setup-buildx-action@v3",
+        "category": "docker"
+      }
+    },
+    {
+      "id": "3",
+      "type": "action",
+      "position": {"x": 250, "y": 290},
+      "data": {
+        "name": "Log in to Registry",
+        "repository": "docker/login-action@v3",
+        "category": "docker",
+        "inputs": {
+          "registry": "ghcr.io",
+          "username": "${{ github.actor }}",
+          "password": "${{ secrets.GITHUB_TOKEN }}"
+        }
+      }
+    },
+    {
+      "id": "4",
+      "type": "action",
+      "position": {"x": 250, "y": 410},
+      "data": {
+        "name": "Build and push",
+        "repository": "docker/build-push-action@v5",
+        "category": "docker",
+        "inputs": {
+          "push": "true",
+          "platforms": "linux/amd64,linux/arm64"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {"id": "e1-2", "source": "1", "target": "2"},
+    {"id": "e2-3", "source": "2", "target": "3"},
+    {"id": "e3-4", "source": "3", "target": "4"}
+  ]
+}

@@ -1,26 +1,32 @@
 import React, { useState, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { AuthProvider } from './contexts/AuthContext';
 import { Sidebar } from './components/Sidebar';
 import { AIAssistant } from './components/AIAssistant';
 import { Canvas } from './components/Canvas';
 import { WorkflowManager } from './components/WorkflowManager';
 import { WorkflowSuggestions } from './components/WorkflowSuggestions';
+import Login from './components/Login';
+import Register from './components/Register';
+import ProtectedRoute from './components/ProtectedRoute';
+import UserProfile from './components/UserProfile';
 import { apiService } from './services/api';
 import type { ActionMetadata, WorkflowGenerationResponse, FlowNode, FlowEdge } from './types';
 
 /**
  * FlowForge - GitHub Actions Workflow Builder
- * 
+ *
  * A powerful visual workflow builder for GitHub Actions that combines
  * drag-and-drop functionality with AI-powered assistance.
- * 
+ *
  * @version 1.0.0
  * @author FlowForge Team
  */
 
-// Main FlowForge component
-const FlowForge = () => {
+// Main FlowForge Workspace component (protected)
+const FlowForgeWorkspace = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showWorkflowManager, setShowWorkflowManager] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -61,9 +67,22 @@ const FlowForge = () => {
   }, []);
 
   return (
-    <ReactFlowProvider>
-      <div className="h-screen flex bg-gray-50">
-        <h1 className="sr-only">FlowForge - Visual GitHub Actions Workflow Builder</h1>
+    <div className="h-screen flex flex-col bg-gray-50">
+      <h1 className="sr-only">FlowForge - Visual GitHub Actions Workflow Builder</h1>
+
+      {/* Top bar with user profile */}
+      <div className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            FlowForge
+          </div>
+          <span className="text-sm text-gray-500">Visual Workflow Builder</span>
+        </div>
+        <UserProfile />
+      </div>
+
+      {/* Main content area */}
+      <div className="flex-1 flex">
         {/* Sidebar with AI Assistant and Actions */}
         <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
           <AIAssistant
@@ -116,8 +135,61 @@ const FlowForge = () => {
           />
         )}
       </div>
-    </ReactFlowProvider>
+    </div>
   );
 };
 
-export default FlowForge;
+// Authentication Pages Component
+const AuthPages = () => {
+  const [showLogin, setShowLogin] = useState(true);
+
+  return showLogin ? (
+    <Login
+      onSuccess={() => {
+        // Will redirect via ProtectedRoute after login
+        window.location.href = '/';
+      }}
+      onSwitchToRegister={() => setShowLogin(false)}
+    />
+  ) : (
+    <Register
+      onSuccess={() => {
+        // Will redirect via ProtectedRoute after registration
+        window.location.href = '/';
+      }}
+      onSwitchToLogin={() => setShowLogin(true)}
+    />
+  );
+};
+
+// Main App component with routing and authentication
+const App = () => {
+  return (
+    <Router>
+      <AuthProvider>
+        <Routes>
+          {/* Auth routes */}
+          <Route path="/login" element={<AuthPages />} />
+          <Route path="/register" element={<AuthPages />} />
+
+          {/* Protected routes */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <ReactFlowProvider>
+                  <FlowForgeWorkspace />
+                </ReactFlowProvider>
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect unknown routes to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
+  );
+};
+
+export default App;

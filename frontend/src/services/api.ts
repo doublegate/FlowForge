@@ -16,11 +16,15 @@ const api = axios.create({
   timeout: 30000, // 30 seconds
 });
 
+// Token storage keys (matches AuthContext)
+const TOKEN_KEY = 'flowforge_access_token';
+const REFRESH_TOKEN_KEY = 'flowforge_refresh_token';
+
 // Request interceptor for auth or logging
 api.interceptors.request.use(
   (config) => {
     // Add auth token if available
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -31,15 +35,38 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling and token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem('authToken');
-      // Redirect to login if needed
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and haven't retried yet, try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+        if (refreshToken) {
+          const response = await axios.post(`${API_BASE_URL}/api/auth/refresh`, {
+            refreshToken
+          });
+
+          const { accessToken } = response.data;
+          localStorage.setItem(TOKEN_KEY, accessToken);
+
+          // Retry original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Refresh failed, logout user
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+        window.location.href = '/login';
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -48,6 +75,20 @@ api.interceptors.response.use(
 export const apiService = {
   // Health check
   health: () => api.get('/api/health'),
+
+  // Authentication
+  auth: {
+    register: (data: { username: string; email: string; password: string; displayName?: string }) =>
+      api.post('/api/auth/register', data),
+    login: (credentials: { identifier: string; password: string }) =>
+      api.post('/api/auth/login', credentials),
+    logout: () => api.post('/api/auth/logout'),
+    refreshToken: (refreshToken: string) =>
+      api.post('/api/auth/refresh', { refreshToken }),
+    getCurrentUser: () => api.get('/api/auth/me'),
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      api.put('/api/auth/password', data),
+  },
 
   // Actions
   getActions: (params?: { limit?: number; offset?: number; category?: string; search?: string }) => 

@@ -33,9 +33,51 @@ const UserSchema = new mongoose.Schema({
 
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function() {
+      // Password required only for local auth (not OAuth)
+      return !this.githubId && !this.googleId;
+    },
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
+  },
+
+  // OAuth Fields
+  githubId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+
+  githubAccessToken: {
+    type: String,
+    select: false
+  },
+
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+
+  googleAccessToken: {
+    type: String,
+    select: false
+  },
+
+  oauthProvider: {
+    type: String,
+    enum: ['local', 'github', 'google', 'microsoft'],
+    default: 'local'
+  },
+
+  avatar: {
+    type: String,
+    trim: true
+  },
+
+  emailVerified: {
+    type: Boolean,
+    default: false
   },
 
   displayName: {

@@ -17,13 +17,16 @@ import ReactFlow, {
   EdgeChange,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { FileCode, Save, Download, Upload, Lightbulb, Undo, Redo, Trash2 } from 'lucide-react';
+import { FileCode, Save, Download, Upload, Lightbulb, Undo, Redo, Trash2, Keyboard } from 'lucide-react';
 import yaml from 'js-yaml';
 
 // Custom node types
 import { ActionNode } from './nodes/ActionNode';
 import { YAMLPreview } from './YAMLPreview';
 import { NodeConfigPanel } from './NodeConfigPanel';
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
+import { useKeyboardShortcuts, commonShortcuts, type KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
+import { useNotification } from '../contexts/NotificationContext';
 import type { FlowNode, FlowEdge, NodeData } from '../types';
 
 interface CanvasProps {
@@ -41,18 +44,21 @@ const defaultEdgeOptions = {
   style: { stroke: '#6366f1' },
 };
 
-export const Canvas: React.FC<CanvasProps> = ({ 
-  onSave, 
+export const Canvas: React.FC<CanvasProps> = ({
+  onSave,
   onShowSuggestions,
   onAIWorkflowLoaded
 }) => {
+  const { success, error: showError, info } = useNotification();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [showYaml, setShowYaml] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const [history, setHistory] = useState<{ nodes: Node[], edges: Edge[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  
+
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
 
@@ -258,24 +264,34 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, [setNodes, setEdges, saveToHistory, onAIWorkflowLoaded]);
 
   // Handle save workflow
-  const handleSave = useCallback(() => {
-    const yamlContent = generateYAML();
-    onSave(nodes, edges, yamlContent);
-  }, [nodes, edges, generateYAML, onSave]);
+  const handleSave = useCallback(async () => {
+    try {
+      const yamlContent = generateYAML();
+      await onSave(nodes, edges, yamlContent);
+      success('Workflow Saved', 'Your workflow has been saved successfully!');
+    } catch (err) {
+      showError('Save Failed', 'Failed to save workflow. Please try again.');
+    }
+  }, [nodes, edges, generateYAML, onSave, success, showError]);
 
   // Handle workflow export
   const handleExport = useCallback(() => {
-    const yamlContent = generateYAML();
-    const blob = new Blob([yamlContent], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'workflow.yml';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [generateYAML]);
+    try {
+      const yamlContent = generateYAML();
+      const blob = new Blob([yamlContent], { type: 'text/yaml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'workflow.yml';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      success('Workflow Exported', 'Your workflow has been downloaded as workflow.yml');
+    } catch (err) {
+      showError('Export Failed', 'Failed to export workflow. Please try again.');
+    }
+  }, [generateYAML, success, showError]);
 
   // Handle workflow import
   const handleImport = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,16 +346,17 @@ export const Canvas: React.FC<CanvasProps> = ({
         }
 
         loadWorkflow(newNodes, newEdges);
+        success('Workflow Imported', 'Your workflow has been imported successfully!');
       } catch (error) {
         console.error('Failed to import workflow:', error);
-        alert('Failed to import workflow. Please check the YAML format.');
+        showError('Import Failed', 'Failed to import workflow. Please check the YAML format.');
       }
     };
     reader.readAsText(file);
-    
+
     // Reset input
     event.target.value = '';
-  }, [loadWorkflow]);
+  }, [loadWorkflow, success, showError]);
 
   // Clear workflow
   const handleClear = useCallback(() => {
@@ -348,8 +365,9 @@ export const Canvas: React.FC<CanvasProps> = ({
       setEdges([]);
       setSelectedNode(null);
       saveToHistory([], []);
+      info('Workflow Cleared', 'Your workflow canvas has been cleared.');
     }
-  }, [nodes.length, setNodes, setEdges, saveToHistory]);
+  }, [nodes.length, setNodes, setEdges, saveToHistory, info]);
 
   // Update node data
   const updateNodeData = useCallback((nodeId: string, newData: Partial<NodeData>) => {
@@ -368,6 +386,106 @@ export const Canvas: React.FC<CanvasProps> = ({
       })
     );
   }, [setNodes]);
+
+  // Keyboard shortcut handlers
+  const handleCopy = useCallback(() => {
+    const selectedNodes = nodes.filter(node => node.selected);
+    if (selectedNodes.length > 0) {
+      setCopiedNodes(selectedNodes);
+      info('Nodes Copied', `${selectedNodes.length} node(s) copied to clipboard`);
+    }
+  }, [nodes, info]);
+
+  const handlePaste = useCallback(() => {
+    if (copiedNodes.length === 0) {
+      info('Nothing to Paste', 'No nodes have been copied yet');
+      return;
+    }
+
+    const newNodes = copiedNodes.map(node => ({
+      ...node,
+      id: `${Date.now()}-${Math.random()}`,
+      position: {
+        x: node.position.x + 50,
+        y: node.position.y + 50,
+      },
+      selected: false,
+    }));
+
+    const updatedNodes = nodes.concat(newNodes);
+    setNodes(updatedNodes);
+    saveToHistory(updatedNodes, edges);
+    success('Nodes Pasted', `${newNodes.length} node(s) pasted successfully`);
+  }, [copiedNodes, nodes, edges, setNodes, saveToHistory, info, success]);
+
+  const handleCut = useCallback(() => {
+    handleCopy();
+    const selectedNodes = nodes.filter(node => node.selected);
+    if (selectedNodes.length > 0) {
+      const remainingNodes = nodes.filter(node => !node.selected);
+      const selectedNodeIds = selectedNodes.map(n => n.id);
+      const remainingEdges = edges.filter(edge =>
+        !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target)
+      );
+      setNodes(remainingNodes);
+      setEdges(remainingEdges);
+      saveToHistory(remainingNodes, remainingEdges);
+    }
+  }, [nodes, edges, handleCopy, setNodes, setEdges, saveToHistory]);
+
+  const handleDelete = useCallback(() => {
+    const selectedNodes = nodes.filter(node => node.selected);
+    if (selectedNodes.length > 0) {
+      const remainingNodes = nodes.filter(node => !node.selected);
+      const selectedNodeIds = selectedNodes.map(n => n.id);
+      const remainingEdges = edges.filter(edge =>
+        !selectedNodeIds.includes(edge.source) && !selectedNodeIds.includes(edge.target)
+      );
+      setNodes(remainingNodes);
+      setEdges(remainingEdges);
+      saveToHistory(remainingNodes, remainingEdges);
+      info('Nodes Deleted', `${selectedNodes.length} node(s) removed from workflow`);
+    }
+  }, [nodes, edges, setNodes, setEdges, saveToHistory, info]);
+
+  const handleSelectAll = useCallback(() => {
+    setNodes(nodes.map(node => ({ ...node, selected: true })));
+  }, [nodes, setNodes]);
+
+  const handleZoomIn = useCallback(() => {
+    reactFlowInstance?.zoomIn({ duration: 200 });
+  }, [reactFlowInstance]);
+
+  const handleZoomOut = useCallback(() => {
+    reactFlowInstance?.zoomOut({ duration: 200 });
+  }, [reactFlowInstance]);
+
+  const handleFitView = useCallback(() => {
+    reactFlowInstance?.fitView({ duration: 200, padding: 0.2 });
+  }, [reactFlowInstance]);
+
+  const toggleHelp = useCallback(() => {
+    setShowHelp(!showHelp);
+  }, [showHelp]);
+
+  // Define keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    { ...commonShortcuts.undo, action: undo },
+    { ...commonShortcuts.redo, action: redo },
+    { ...commonShortcuts.copy, action: handleCopy },
+    { ...commonShortcuts.paste, action: handlePaste },
+    { ...commonShortcuts.cut, action: handleCut },
+    { ...commonShortcuts.delete, action: handleDelete },
+    { ...commonShortcuts.selectAll, action: handleSelectAll },
+    { ...commonShortcuts.save, action: handleSave },
+    { ...commonShortcuts.zoomIn, action: handleZoomIn },
+    { ...commonShortcuts.zoomOut, action: handleZoomOut },
+    { ...commonShortcuts.fitView, action: handleFitView },
+    { ...commonShortcuts.help, action: toggleHelp },
+  ];
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts({ shortcuts, enabled: true });
 
   return (
     <div className="flex-1 relative">
@@ -481,6 +599,17 @@ export const Canvas: React.FC<CanvasProps> = ({
               >
                 <Trash2 className="w-4 h-4" />
               </button>
+
+              <div className="border-l border-gray-300 mx-1" />
+
+              <button
+                onClick={toggleHelp}
+                className="px-2 py-1.5 text-gray-600 hover:text-gray-800 transition-colors"
+                aria-label="Show keyboard shortcuts"
+                title="Keyboard shortcuts (Shift + ?)"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
             </Panel>
 
             {/* Node Count Info */}
@@ -509,6 +638,14 @@ export const Canvas: React.FC<CanvasProps> = ({
           node={selectedNode}
           onUpdate={updateNodeData}
           onClose={() => setSelectedNode(null)}
+        />
+      )}
+
+      {/* Keyboard Shortcuts Help */}
+      {showHelp && (
+        <KeyboardShortcutsHelp
+          shortcuts={shortcuts}
+          onClose={() => setShowHelp(false)}
         />
       )}
     </div>

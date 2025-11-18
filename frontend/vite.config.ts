@@ -17,14 +17,30 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'react-flow': ['reactflow'],
           'editor': ['@monaco-editor/react'],
-          'ui': ['axios', 'lucide-react']
+          'ui': ['axios', 'lucide-react', 'js-yaml']
         }
       }
     },
-    chunkSizeWarningLimit: 1000
+    chunkSizeWarningLimit: 1000,
+    // Enable CSS code splitting
+    cssCodeSplit: true,
+    // Source maps disabled for production
+    sourcemap: false,
+  },
+  // Optimize dependency pre-bundling
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'reactflow',
+      'lucide-react',
+      'axios',
+      'js-yaml'
+    ],
   },
   server: {
     port: 5173,

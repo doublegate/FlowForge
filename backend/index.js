@@ -1024,24 +1024,47 @@ app.post('/api/workflows/optimize', apiLimiter, async (req, res) => {
 /**
  * GET /api/workflows
  * Get all workflows (with pagination)
+ * Optional auth - if authenticated, shows user's workflows + public workflows
+ * If not authenticated, shows only public workflows
  */
-app.get('/api/workflows', apiLimiter, async (req, res) => {
+app.get('/api/workflows', apiLimiter, optionalAuth, async (req, res) => {
   try {
     // Input validation and sanitization for pagination
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
-    
-    const query = req.query.public === 'true' ? { isPublic: true } : {};
-    
+
+    // Build query based on authentication and filters
+    let query = {};
+
+    if (req.query.public === 'true') {
+      // Only public workflows
+      query = { isPublic: true };
+    } else if (req.query.mine === 'true' && req.userId) {
+      // Only user's workflows
+      query = { userId: req.userId };
+    } else if (req.userId) {
+      // User's workflows + public workflows
+      query = {
+        $or: [
+          { userId: req.userId },
+          { isPublic: true }
+        ]
+      };
+    } else {
+      // Not authenticated - only public workflows
+      query = { isPublic: true };
+    }
+
     const workflows = await Workflow.find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
-      .select('-yaml'); // Exclude yaml for list view
-    
+      .select('-yaml') // Exclude yaml for list view
+      .populate('userId', 'username displayName');
+
     const total = await Workflow.countDocuments(query);
-    
+
     res.json({
       workflows,
       pagination: {
@@ -1060,15 +1083,25 @@ app.get('/api/workflows', apiLimiter, async (req, res) => {
 /**
  * GET /api/workflows/:id
  * Get a specific workflow
+ * Optional auth - public workflows accessible to all, private workflows only to owner
  */
-app.get('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.get('/api/workflows/:id', apiLimiter, optionalAuth, async (req, res) => {
   try {
-    const workflow = await Workflow.findById(req.params.id);
-    
+    const workflow = await Workflow.findById(req.params.id)
+      .populate('userId', 'username displayName');
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check access permissions
+    if (!workflow.isPublic) {
+      // Private workflow - check if user is the owner
+      if (!req.userId || workflow.userId._id.toString() !== req.userId) {
+        return res.status(403).json({ error: 'Access denied to private workflow' });
+      }
+    }
+
     res.json(workflow);
   } catch (error) {
     console.error('Error fetching workflow:', error);
@@ -1078,44 +1111,45 @@ app.get('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * POST /api/workflows
- * Create a new workflow
+ * Create a new workflow (requires authentication)
  */
-app.post('/api/workflows', apiLimiter, async (req, res) => {
+app.post('/api/workflows', apiLimiter, authenticate, async (req, res) => {
   try {
     const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
-    
+
     // Input validation
     if (!name || !nodes || !edges) {
       return res.status(400).json({ error: 'Name, nodes, and edges are required' });
     }
-    
+
     // Sanitize string inputs
     const sanitizedName = String(name).substring(0, 200).trim();
     const sanitizedDescription = description ? String(description).substring(0, 1000).trim() : undefined;
     const sanitizedYaml = yaml ? String(yaml).substring(0, 50000) : undefined;
-    
+
     // Validate arrays
     if (!Array.isArray(nodes) || !Array.isArray(edges)) {
       return res.status(400).json({ error: 'Nodes and edges must be arrays' });
     }
-    
+
     // Validate tags if provided
-    const sanitizedTags = Array.isArray(tags) ? 
-      tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+    const sanitizedTags = Array.isArray(tags) ?
+      tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) :
       undefined;
-    
+
     const workflow = new Workflow({
       name: sanitizedName,
       description: sanitizedDescription,
+      userId: req.userId, // Set from authenticated user
       nodes: nodes.slice(0, 100), // Limit number of nodes
       edges: edges.slice(0, 200), // Limit number of edges
       yaml: sanitizedYaml,
       tags: sanitizedTags,
       isPublic: Boolean(isPublic)
     });
-    
+
     await workflow.save();
-    
+
     res.status(201).json(workflow);
   } catch (error) {
     console.error('Error creating workflow:', error);
@@ -1125,18 +1159,23 @@ app.post('/api/workflows', apiLimiter, async (req, res) => {
 
 /**
  * PUT /api/workflows/:id
- * Update a workflow
+ * Update a workflow (requires authentication and ownership)
  */
-app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.put('/api/workflows/:id', apiLimiter, authenticate, async (req, res) => {
   try {
     const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
-    
+
     const workflow = await Workflow.findById(req.params.id);
-    
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check ownership
+    if (workflow.userId && workflow.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to edit this workflow' });
+    }
+
     // Update fields with sanitization
     if (name !== undefined) {
       workflow.name = String(name).substring(0, 200).trim();
@@ -1160,16 +1199,16 @@ app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
       workflow.yaml = yaml ? String(yaml).substring(0, 50000) : '';
     }
     if (tags !== undefined) {
-      workflow.tags = Array.isArray(tags) ? 
-        tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+      workflow.tags = Array.isArray(tags) ?
+        tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) :
         [];
     }
     if (isPublic !== undefined) {
       workflow.isPublic = Boolean(isPublic);
     }
-    
+
     await workflow.save();
-    
+
     res.json(workflow);
   } catch (error) {
     console.error('Error updating workflow:', error);
@@ -1179,18 +1218,23 @@ app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * DELETE /api/workflows/:id
- * Delete a workflow
+ * Delete a workflow (requires authentication and ownership)
  */
-app.delete('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.delete('/api/workflows/:id', apiLimiter, authenticate, async (req, res) => {
   try {
     const workflow = await Workflow.findById(req.params.id);
-    
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check ownership
+    if (workflow.userId && workflow.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to delete this workflow' });
+    }
+
     await workflow.deleteOne();
-    
+
     res.json({ message: 'Workflow deleted successfully' });
   } catch (error) {
     console.error('Error deleting workflow:', error);
@@ -1200,23 +1244,24 @@ app.delete('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * POST /api/workflows/:id/fork
- * Fork a public workflow
+ * Fork a public workflow (requires authentication)
  */
-app.post('/api/workflows/:id/fork', apiLimiter, async (req, res) => {
+app.post('/api/workflows/:id/fork', apiLimiter, authenticate, async (req, res) => {
   try {
     const originalWorkflow = await Workflow.findById(req.params.id);
-    
+
     if (!originalWorkflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
     if (!originalWorkflow.isPublic) {
       return res.status(403).json({ error: 'Cannot fork private workflow' });
     }
-    
+
     const forkedWorkflow = new Workflow({
       name: `${originalWorkflow.name} (Fork)`,
       description: originalWorkflow.description,
+      userId: req.userId, // Set to current user
       nodes: originalWorkflow.nodes,
       edges: originalWorkflow.edges,
       yaml: originalWorkflow.yaml,
@@ -1224,9 +1269,9 @@ app.post('/api/workflows/:id/fork', apiLimiter, async (req, res) => {
       isPublic: false,
       forkedFrom: originalWorkflow._id
     });
-    
+
     await forkedWorkflow.save();
-    
+
     res.status(201).json(forkedWorkflow);
   } catch (error) {
     console.error('Error forking workflow:', error);

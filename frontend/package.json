@@ -1,6 +1,6 @@
 {
   "name": "flowforge-frontend",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "Frontend for FlowForge - Visual GitHub Actions Workflow Builder",
   "type": "module",
   "private": true,

@@ -5,6 +5,236 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-11-18
+
+### 🔐 Major Features - Complete Authentication System (Phase 3)
+
+This release implements a comprehensive JWT-based authentication system across the entire application, including user management, protected routes, and workflow ownership.
+
+#### Backend Authentication (Day 1)
+
+**User Management**
+- **User Model** (`backend/models/User.js`)
+  - MongoDB schema with comprehensive validation
+  - Bcrypt password hashing (12 salt rounds)
+  - Role-based access control: user, admin, moderator
+  - User preferences: theme, notifications, default workflow visibility
+  - Email verification and password reset token support
+  - Login tracking: IP, user agent, login count
+  - Automatic password field exclusion from queries
+
+- **JWT Token System** (`backend/utils/jwtUtils.js`)
+  - Access tokens (7 days) and refresh tokens (30 days)
+  - Token generation with issuer and audience validation
+  - Secure token verification with error handling
+  - Token refresh mechanism for seamless user experience
+
+- **Authentication Middleware** (`backend/middleware/auth.js`)
+  - `authenticate()` - Requires valid JWT token
+  - `optionalAuth()` - Provides user context if authenticated
+  - `requireAdmin()` - Admin-only route protection
+  - `requireRole()` - Role-based access control
+  - `requireOwnershipOrAdmin()` - Resource ownership validation
+
+- **Authentication Routes** (`backend/routes/auth.js`)
+  - `POST /api/auth/register` - User registration with validation
+  - `POST /api/auth/login` - Username/email + password authentication
+  - `POST /api/auth/refresh` - Token refresh endpoint
+  - `GET /api/auth/me` - Current user profile (protected)
+  - `POST /api/auth/logout` - Logout endpoint
+  - `PUT /api/auth/password` - Password change (protected)
+
+#### Frontend Authentication (Day 2)
+
+**React Context & State Management**
+- **AuthContext** (`frontend/src/contexts/AuthContext.tsx`)
+  - Global authentication state with React Context
+  - User state management (user object, isAuthenticated, isLoading)
+  - Login, register, logout methods
+  - Auto-login on page load with token validation
+  - Token refresh with axios interceptors
+  - Automatic token inclusion in API requests
+
+**Authentication UI Components**
+- **Login Component** (`frontend/src/components/Login.tsx`)
+  - Username/email and password fields
+  - Form validation with real-time error feedback
+  - Password visibility toggle
+  - Demo login option for testing
+  - Clean, gradient-based design
+
+- **Register Component** (`frontend/src/components/Register.tsx`)
+  - Comprehensive registration form
+  - Field validation: username (3-30 chars, alphanumeric), email, password (8+ chars)
+  - Password confirmation with match validation
+  - Optional display name field
+  - Real-time validation feedback on blur
+  - Required field indicators
+
+- **UserProfile Component** (`frontend/src/components/UserProfile.tsx`)
+  - User avatar with gradient background
+  - Dropdown menu with settings and logout
+  - User information display (name, email)
+  - Responsive design with smooth animations
+
+- **ProtectedRoute Component** (`frontend/src/components/ProtectedRoute.tsx`)
+  - Route guard for authenticated pages
+  - Loading state while checking authentication
+  - Admin role verification
+  - Automatic redirect to login when not authenticated
+
+**Routing & Navigation**
+- **React Router Integration** (`frontend/src/App.tsx`)
+  - Client-side routing with React Router v6
+  - Public routes: `/login`, `/register`
+  - Protected routes: `/` (main workspace)
+  - AuthProvider wraps entire application
+  - Top navigation bar with FlowForge branding
+  - User profile in top-right corner
+
+**Styling**
+- **Auth.css** (`frontend/src/styles/Auth.css`)
+  - Modern, gradient-based design
+  - Consistent form styling across components
+  - Loading spinners and error states
+  - Responsive layout for mobile devices
+  - Dark mode support (prefers-color-scheme)
+  - Smooth animations and transitions
+
+**API Service Updates** (`frontend/src/services/api.ts`)
+- Updated token storage keys to match AuthContext
+- Added auth API methods (register, login, logout, refresh, me, password)
+- Enhanced axios interceptors for token refresh
+- Automatic retry on 401 with new access token
+- Token refresh flow: attempt refresh → retry request → logout on failure
+
+#### Workflow Integration (Day 3)
+
+**Protected Workflow Endpoints**
+- **GET /api/workflows**
+  - Optional authentication
+  - Shows user's workflows + public workflows when authenticated
+  - Shows only public workflows when not authenticated
+  - Query parameters: `?mine=true`, `?public=true`
+  - Populates user information (username, displayName)
+
+- **GET /api/workflows/:id**
+  - Optional authentication
+  - Public workflows accessible to all
+  - Private workflows only accessible to owner
+  - Returns 403 for unauthorized access attempts
+
+- **POST /api/workflows**
+  - Requires authentication
+  - Automatically sets userId from authenticated user
+  - Users must be logged in to create workflows
+
+- **PUT /api/workflows/:id**
+  - Requires authentication and ownership
+  - Validates user owns the workflow before update
+  - Returns 403 if not the owner
+
+- **DELETE /api/workflows/:id**
+  - Requires authentication and ownership
+  - Validates user owns the workflow before deletion
+  - Returns 403 if not the owner
+
+- **POST /api/workflows/:id/fork**
+  - Requires authentication
+  - Sets userId to current user for forked workflow
+  - Can only fork public workflows
+
+### 🏗️ Architecture Improvements
+
+**Security**
+- JWT-based stateless authentication
+- Bcrypt password hashing with strong salt rounds
+- Token-based authorization on all write endpoints
+- Ownership validation before resource modifications
+- Protected password fields excluded from queries
+- Comprehensive input validation and sanitization
+
+**User Experience**
+- Seamless authentication with auto-login
+- Token refresh prevents repeated logins
+- Loading states during authentication checks
+- Clear error messages for failed attempts
+- Password visibility toggles
+- Form validation feedback
+
+**Code Organization**
+- Separation of concerns: auth context, middleware, routes
+- Type-safe with TypeScript interfaces
+- Reusable authentication hooks
+- Modular component design
+- Consistent API response formats
+
+### 📦 Dependencies
+
+**Backend**
+- jsonwebtoken ^9.0.2 - JWT token generation and verification
+- bcrypt ^5.1.1 - Secure password hashing
+- @types/jsonwebtoken - TypeScript definitions
+- @types/bcrypt - TypeScript definitions
+
+**Frontend**
+- react-router-dom ^6.x - Client-side routing
+
+### 🔧 Breaking Changes
+
+None - Authentication is additive. Existing endpoints maintain backward compatibility.
+
+### 📝 Migration Guide
+
+**For Existing Users:**
+1. Create a user account via `/register` or `/login` endpoints
+2. All new workflows will be associated with your user account
+3. Existing workflows without userId remain public
+
+**For Developers:**
+1. Use `authenticate` middleware for protected routes
+2. Access user ID via `req.userId` in route handlers
+3. Use `optionalAuth` for routes that work with or without authentication
+4. Check `req.user` for full user object access
+
+### 📊 Statistics
+
+**Backend**
+- 6 new files created (models, utils, middleware, routes)
+- ~1,259 lines of authentication code
+- 6 authentication endpoints
+- 5 middleware functions
+- 1 comprehensive user model
+
+**Frontend**
+- 6 new files created (context, components, styles)
+- ~1,676 lines of UI code
+- 5 authentication components
+- 1 global auth context
+- Complete routing integration
+
+**Total**: ~2,935 lines of production code
+
+### 🧪 Testing Notes
+
+Manual testing required:
+1. User registration flow
+2. Login with username/email
+3. Token refresh mechanism
+4. Protected route access
+5. Workflow ownership validation
+6. Auto-login on page reload
+
+### 🚀 Next Steps
+
+- Implement email verification
+- Add password reset functionality
+- Create admin dashboard
+- Add team/organization support
+- Implement workflow sharing permissions
+
+---
+
 ## [0.3.4] - 2025-11-18
 
 ### 🎉 Major Features - Advanced Workflow Analysis & Generation

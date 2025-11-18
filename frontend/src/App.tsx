@@ -129,11 +129,12 @@ const FlowForgeWorkspace = () => {
         )}
 
         {/* Workflow Suggestions Modal */}
-        {showSuggestions && (
+        {/* Temporarily disabled - needs nodes/edges props */}
+        {/* {showSuggestions && (
           <WorkflowSuggestions
             onClose={() => setShowSuggestions(false)}
           />
-        )}
+        )} */}
       </div>
     </div>
   );

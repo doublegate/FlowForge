@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Bot, ChevronRight, Loader2, X, Lightbulb, Zap, AlertCircle } from 'lucide-react';
 import { apiService } from '../services/api';
+import { useNotification } from '../contexts/NotificationContext';
 import type { WorkflowGenerationResponse } from '../types';
 
 interface AIAssistantProps {
   onWorkflowGenerated: (workflow: WorkflowGenerationResponse) => void;
-  onError: (error: string) => void;
 }
 
 interface AIResponse extends WorkflowGenerationResponse {
@@ -15,10 +15,10 @@ interface AIResponse extends WorkflowGenerationResponse {
   version?: string;
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ 
-  onWorkflowGenerated, 
-  onError 
+export const AIAssistant: React.FC<AIAssistantProps> = ({
+  onWorkflowGenerated
 }) => {
+  const { error: showError, success } = useNotification();
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<AIResponse | null>(null);
@@ -46,10 +46,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     try {
       const result = await apiService.generateWorkflow(userMessage);
       const aiResponse = result.data as AIResponse;
-      
+
       setResponse(aiResponse);
       setShowResponse(true);
-      
+
       // Add assistant response to history
       setConversationHistory(prev => [...prev, {
         type: 'assistant',
@@ -59,11 +59,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
       // Trigger workflow generation in parent component
       onWorkflowGenerated(aiResponse);
-      
+
+      // Show success notification
+      success('Workflow Generated', 'Your AI-powered workflow has been created successfully!');
+
     } catch (err) {
       const errorMessage = (err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to generate workflow. Please try again.';
-      onError(errorMessage);
-      
+
+      // Show error notification
+      showError('Generation Failed', errorMessage);
+
       // Add error to history
       setConversationHistory(prev => [...prev, {
         type: 'assistant',

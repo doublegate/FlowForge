@@ -1,0 +1,74 @@
+{
+  "name": "Node.js CI/CD Pipeline",
+  "description": "Complete CI/CD pipeline for Node.js applications with testing, linting, and deployment",
+  "category": "nodejs",
+  "tags": ["nodejs", "ci", "cd", "testing", "npm"],
+  "difficulty": "intermediate",
+  "yaml": "name: Node.js CI/CD\n\non:\n  push:\n    branches: [main, develop]\n  pull_request:\n    branches: [main]\n  workflow_dispatch:\n\nenv:\n  NODE_VERSION: '18'\n  REGISTRY: ghcr.io\n\njobs:\n  lint:\n    name: Lint Code\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run ESLint\n        run: npm run lint\n\n  test:\n    name: Run Tests\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node-version: [16, 18, 20]\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js ${{ matrix.node-version }}\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ matrix.node-version }}\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Run tests\n        run: npm test -- --coverage\n\n      - name: Upload coverage\n        uses: codecov/codecov-action@v3\n        if: matrix.node-version == 18\n        with:\n          files: ./coverage/lcov.info\n          flags: unittests\n\n  build:\n    name: Build Application\n    runs-on: ubuntu-latest\n    needs: [lint, test]\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v4\n\n      - name: Setup Node.js\n        uses: actions/setup-node@v4\n        with:\n          node-version: ${{ env.NODE_VERSION }}\n          cache: 'npm'\n\n      - name: Install dependencies\n        run: npm ci\n\n      - name: Build\n        run: npm run build\n\n      - name: Upload artifacts\n        uses: actions/upload-artifact@v3\n        with:\n          name: dist\n          path: dist/\n          retention-days: 7\n\n  deploy:\n    name: Deploy to Production\n    runs-on: ubuntu-latest\n    needs: build\n    if: github.ref == 'refs/heads/main' && github.event_name == 'push'\n    environment:\n      name: production\n      url: https://your-app.com\n    steps:\n      - name: Download artifacts\n        uses: actions/download-artifact@v3\n        with:\n          name: dist\n\n      - name: Deploy to production\n        run: |\n          echo 'Add your deployment commands here'\n          # Example: Deploy to Vercel, Netlify, AWS, etc.\n",
+  "nodes": [
+    {
+      "id": "1",
+      "type": "action",
+      "position": {"x": 250, "y": 50},
+      "data": {
+        "name": "Checkout code",
+        "repository": "actions/checkout@v4",
+        "category": "setup",
+        "description": "Check out repository code"
+      }
+    },
+    {
+      "id": "2",
+      "type": "action",
+      "position": {"x": 250, "y": 170},
+      "data": {
+        "name": "Setup Node.js",
+        "repository": "actions/setup-node@v4",
+        "category": "setup",
+        "inputs": {
+          "node-version": "18",
+          "cache": "npm"
+        }
+      }
+    },
+    {
+      "id": "3",
+      "type": "action",
+      "position": {"x": 250, "y": 290},
+      "data": {
+        "name": "Install dependencies",
+        "repository": "run",
+        "category": "build",
+        "command": "npm ci"
+      }
+    },
+    {
+      "id": "4",
+      "type": "action",
+      "position": {"x": 100, "y": 410},
+      "data": {
+        "name": "Run ESLint",
+        "repository": "run",
+        "category": "test",
+        "command": "npm run lint"
+      }
+    },
+    {
+      "id": "5",
+      "type": "action",
+      "position": {"x": 400, "y": 410},
+      "data": {
+        "name": "Run tests",
+        "repository": "run",
+        "category": "test",
+        "command": "npm test -- --coverage"
+      }
+    }
+  ],
+  "edges": [
+    {"id": "e1-2", "source": "1", "target": "2"},
+    {"id": "e2-3", "source": "2", "target": "3"},
+    {"id": "e3-4", "source": "3", "target": "4"},
+    {"id": "e3-5", "source": "3", "target": "5"}
+  ]
+}

@@ -1,0 +1,285 @@
+/**
+ * Theme Variables and Dark Mode Styles
+ *
+ * Comprehensive theme system with CSS custom properties.
+ * Supports light and dark modes with smooth transitions.
+ */
+
+/* Light theme (default) */
+:root {
+  /* Primary colors */
+  --color-primary: #667eea;
+  --color-primary-dark: #5568d3;
+  --color-primary-light: #7e93f5;
+
+  /* Secondary colors */
+  --color-secondary: #764ba2;
+  --color-secondary-dark: #63408a;
+  --color-secondary-light: #8a5db5;
+
+  /* Background colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f7fafc;
+  --color-bg-tertiary: #edf2f7;
+  --color-bg-elevated: #ffffff;
+
+  /* Text colors */
+  --color-text-primary: #1a202c;
+  --color-text-secondary: #4a5568;
+  --color-text-tertiary: #718096;
+  --color-text-inverse: #ffffff;
+
+  /* Border colors */
+  --color-border-primary: #e2e8f0;
+  --color-border-secondary: #cbd5e0;
+  --color-border-focus: #667eea;
+
+  /* Status colors */
+  --color-success: #48bb78;
+  --color-warning: #ed8936;
+  --color-error: #f56565;
+  --color-info: #4299e1;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 350ms ease;
+}
+
+/* Dark theme */
+:root.dark {
+  /* Primary colors */
+  --color-primary: #7e93f5;
+  --color-primary-dark: #667eea;
+  --color-primary-light: #93a7ff;
+
+  /* Secondary colors */
+  --color-secondary: #8a5db5;
+  --color-secondary-dark: #764ba2;
+  --color-secondary-light: #9d70c4;
+
+  /* Background colors */
+  --color-bg-primary: #1a202c;
+  --color-bg-secondary: #2d3748;
+  --color-bg-tertiary: #4a5568;
+  --color-bg-elevated: #2d3748;
+
+  /* Text colors */
+  --color-text-primary: #f7fafc;
+  --color-text-secondary: #e2e8f0;
+  --color-text-tertiary: #cbd5e0;
+  --color-text-inverse: #1a202c;
+
+  /* Border colors */
+  --color-border-primary: #4a5568;
+  --color-border-secondary: #2d3748;
+  --color-border-focus: #7e93f5;
+
+  /* Status colors */
+  --color-success: #68d391;
+  --color-warning: #f6ad55;
+  --color-error: #fc8181;
+  --color-info: #63b3ed;
+
+  /* Shadow (darker in dark mode) */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Base styles with theme variables */
+body {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+/* Apply theme to common elements */
+.bg-primary {
+  background-color: var(--color-bg-primary);
+}
+
+.bg-secondary {
+  background-color: var(--color-bg-secondary);
+}
+
+.bg-tertiary {
+  background-color: var(--color-bg-tertiary);
+}
+
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+}
+
+.text-tertiary {
+  color: var(--color-text-tertiary);
+}
+
+.border-primary {
+  border-color: var(--color-border-primary);
+}
+
+.border-secondary {
+  border-color: var(--color-border-secondary);
+}
+
+/* Dark mode overrides for specific components */
+.dark .bg-white {
+  background-color: var(--color-bg-primary);
+}
+
+.dark .bg-gray-50 {
+  background-color: var(--color-bg-secondary);
+}
+
+.dark .bg-gray-100 {
+  background-color: var(--color-bg-tertiary);
+}
+
+.dark .text-gray-900 {
+  color: var(--color-text-primary);
+}
+
+.dark .text-gray-700 {
+  color: var(--color-text-secondary);
+}
+
+.dark .text-gray-500 {
+  color: var(--color-text-tertiary);
+}
+
+.dark .border-gray-200 {
+  border-color: var(--color-border-primary);
+}
+
+.dark .border-gray-300 {
+  border-color: var(--color-border-secondary);
+}
+
+/* React Flow dark mode support */
+.dark .react-flow {
+  background-color: var(--color-bg-primary);
+}
+
+.dark .react-flow__node {
+  background-color: var(--color-bg-elevated);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+
+.dark .react-flow__edge-path {
+  stroke: var(--color-border-secondary);
+}
+
+.dark .react-flow__handle {
+  background-color: var(--color-primary);
+}
+
+/* Monaco Editor dark mode */
+.dark .monaco-editor {
+  --vscode-editor-background: var(--color-bg-primary);
+  --vscode-editor-foreground: var(--color-text-primary);
+}
+
+/* Smooth theme transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: var(--transition-fast);
+  transition-timing-function: ease;
+}
+
+/* Disable transitions for initial load */
+.no-transitions * {
+  transition: none !important;
+}
+
+/* Theme toggle button styles */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border-primary);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-toggle:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-focus);
+}
+
+.theme-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Dark mode for auth pages */
+.dark .auth-container {
+  background: linear-gradient(135deg, #4a5568 0%, #2d3748 100%);
+}
+
+.dark .auth-card {
+  background-color: var(--color-bg-elevated);
+  box-shadow: var(--shadow-xl);
+}
+
+.dark .auth-error {
+  background-color: rgba(245, 101, 101, 0.1);
+  color: var(--color-error);
+  border-left-color: var(--color-error);
+}
+
+.dark input {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-primary);
+}
+
+.dark input:focus {
+  border-color: var(--color-border-focus);
+}
+
+.dark input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Scrollbar dark mode */
+.dark ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-bg-tertiary);
+  border-radius: 6px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-secondary);
+}
+
+/* Selection dark mode */
+.dark ::selection {
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+}

@@ -1,36 +1,53 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactFlowProvider } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { Sidebar } from './components/Sidebar';
 import { AIAssistant } from './components/AIAssistant';
 import { Canvas } from './components/Canvas';
-import { WorkflowManager } from './components/WorkflowManager';
-import { WorkflowSuggestions } from './components/WorkflowSuggestions';
+import ProtectedRoute from './components/ProtectedRoute';
+import UserProfile from './components/UserProfile';
+import ThemeToggle from './components/ThemeToggle';
+import ErrorBoundary from './components/ErrorBoundary';
+import SkipLink from './components/SkipLink';
+import LoadingSpinner from './components/LoadingSpinner';
+import { Menu, X } from 'lucide-react';
 import { apiService } from './services/api';
 import type { ActionMetadata, WorkflowGenerationResponse, FlowNode, FlowEdge } from './types';
 
+// Lazy load components that are not immediately needed
+const Login = lazy(() => import('./components/Login'));
+const Register = lazy(() => import('./components/Register'));
+const WorkflowManager = lazy(() => import('./components/WorkflowManager'));
+const WorkflowSuggestions = lazy(() => import('./components/WorkflowSuggestions'));
+const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
+
 /**
  * FlowForge - GitHub Actions Workflow Builder
- * 
+ *
  * A powerful visual workflow builder for GitHub Actions that combines
  * drag-and-drop functionality with AI-powered assistance.
- * 
+ *
  * @version 1.0.0
  * @author FlowForge Team
  */
 
-// Main FlowForge component
-const FlowForge = () => {
+// Main FlowForge Workspace component (protected)
+const FlowForgeWorkspace = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showWorkflowManager, setShowWorkflowManager] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [, setCurrentAction] = useState<ActionMetadata | null>(null);
 
   // Handle AI workflow generation
-  const handleAIWorkflowGenerated = useCallback((aiResponse: WorkflowGenerationResponse) => {
+  const handleAIWorkflowGenerated = useCallback((_aiResponse: WorkflowGenerationResponse) => {
     // Successfully generated AI workflow
     // The Canvas component will handle the workflow loading
+    // Future: Could use aiResponse here to show statistics or additional UI feedback
   }, []);
 
   // Handle workflow save
@@ -50,7 +67,7 @@ const FlowForge = () => {
       setShowWorkflowManager(true);
     } catch (err) {
       console.error('Failed to save workflow:', err);
-      setError('Failed to save workflow. Please try again.');
+      throw new Error('Failed to save workflow. Please try again.');
     }
   }, []);
 
@@ -60,63 +77,158 @@ const FlowForge = () => {
   }, []);
 
   return (
-    <ReactFlowProvider>
-      <div className="h-screen flex bg-gray-50">
-        <h1 className="sr-only">FlowForge - Visual GitHub Actions Workflow Builder</h1>
+    <div className="h-screen flex flex-col bg-gray-50">
+      <SkipLink />
+      <h1 className="sr-only">FlowForge - Visual GitHub Actions Workflow Builder</h1>
+
+      {/* Top bar with user profile */}
+      <header role="banner" className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent" role="heading" aria-level={1}>
+            FlowForge
+          </div>
+          <span className="text-sm text-gray-500" aria-label="Application subtitle">Visual Workflow Builder</span>
+        </div>
+        <div className="flex items-center gap-3" role="toolbar" aria-label="User tools">
+          <ThemeToggle />
+          <UserProfile />
+        </div>
+      </header>
+
+      {/* Main content area */}
+      <div className="flex-1 flex">
+        {/* Mobile Sidebar Overlay */}
+        {mobileSidebarOpen && (
+          <div
+            className="mobile-sidebar-overlay active"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close sidebar"
+          />
+        )}
+
         {/* Sidebar with AI Assistant and Actions */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        <aside
+          role="complementary"
+          aria-label="Tools and actions sidebar"
+          className={`w-80 bg-white border-r border-gray-200 flex flex-col ${mobileSidebarOpen ? 'mobile-sidebar-open' : ''}`}
+        >
           <AIAssistant
             onWorkflowGenerated={handleAIWorkflowGenerated}
-            onError={setError}
           />
           <Sidebar
             onActionDrag={handleActionDrag}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
           />
-        </div>
+        </aside>
+
+        {/* Mobile Menu Toggle Button */}
+        <button
+          className="mobile-menu-toggle"
+          onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          aria-label={mobileSidebarOpen ? 'Close menu' : 'Open menu'}
+        >
+          {mobileSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
 
         {/* Main Canvas */}
-        <Canvas
-          onSave={handleWorkflowSave}
-          onShowSuggestions={() => setShowSuggestions(true)}
-        />
-
-        {/* Error Display */}
-        {error && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 shadow-lg">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full" />
-                <span className="text-sm text-red-700">{error}</span>
-                <button
-                  onClick={() => setError(null)}
-                  className="ml-2 text-red-500 hover:text-red-700"
-                  aria-label="Close error message"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <main id="main-content" role="main" aria-label="Workflow canvas" className="flex-1">
+          <Canvas
+            onSave={handleWorkflowSave}
+            onShowSuggestions={() => setShowSuggestions(true)}
+          />
+        </main>
 
         {/* Workflow Manager Modal */}
         {showWorkflowManager && (
-          <WorkflowManager
-            onClose={() => setShowWorkflowManager(false)}
-          />
+          <Suspense fallback={<LoadingSpinner message="Loading workflow manager..." />}>
+            <WorkflowManager
+              onClose={() => setShowWorkflowManager(false)}
+            />
+          </Suspense>
         )}
 
         {/* Workflow Suggestions Modal */}
-        {showSuggestions && (
+        {/* Temporarily disabled - needs nodes/edges props */}
+        {/* {showSuggestions && (
           <WorkflowSuggestions
             onClose={() => setShowSuggestions(false)}
           />
-        )}
+        )} */}
       </div>
-    </ReactFlowProvider>
+    </div>
   );
 };
 
-export default FlowForge;
+// Authentication Pages Component
+const AuthPages = () => {
+  const [showLogin, setShowLogin] = useState(true);
+
+  return (
+    <Suspense fallback={<LoadingSpinner message="Loading..." fullScreen />}>
+      {showLogin ? (
+        <Login
+          onSuccess={() => {
+            // Will redirect via ProtectedRoute after login
+            window.location.href = '/';
+          }}
+          onSwitchToRegister={() => setShowLogin(false)}
+        />
+      ) : (
+        <Register
+          onSuccess={() => {
+            // Will redirect via ProtectedRoute after registration
+            window.location.href = '/';
+          }}
+          onSwitchToLogin={() => setShowLogin(true)}
+        />
+      )}
+    </Suspense>
+  );
+};
+
+// Main App component with routing and authentication
+const App = () => {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider>
+        <NotificationProvider>
+          <Router>
+            <AuthProvider>
+              <Routes>
+                {/* Auth routes */}
+                <Route path="/login" element={<AuthPages />} />
+                <Route path="/register" element={<AuthPages />} />
+                <Route
+                  path="/auth/callback"
+                  element={
+                    <Suspense fallback={<LoadingSpinner message="Authenticating..." fullScreen />}>
+                      <OAuthCallback />
+                    </Suspense>
+                  }
+                />
+
+                {/* Protected routes */}
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <ReactFlowProvider>
+                        <FlowForgeWorkspace />
+                      </ReactFlowProvider>
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* Redirect unknown routes to home */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </AuthProvider>
+          </Router>
+        </NotificationProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
+
+export default App;

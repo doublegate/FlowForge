@@ -1,45 +1,56 @@
 # FlowForge Architecture
 
-**Last Updated**: 2025-06-24
+**Last Updated**: 2025-11-19
+**Version**: 0.7.0
 
 ## Overview
 
-FlowForge is a full-stack web application built with a modern microservices-oriented architecture, now available as both a web application and desktop distribution. The system is divided into four main components:
+FlowForge is a full-stack web application built with a modern microservices-oriented architecture, now available as both a web application and desktop distribution. The system is divided into five main components:
 
-1. **Frontend**: React-based SPA with visual workflow builder
-2. **Backend**: Express.js REST API with MongoDB persistence
-3. **Desktop Distribution**: Flatpak packaging with Electron wrapper
-4. **External Services**: GitHub API, OpenAI API, and actionlint
+1. **Frontend**: React-based SPA with visual workflow builder and real-time collaboration
+2. **Backend**: Express.js REST API with MongoDB persistence and WebSocket server
+3. **Real-time Layer**: Socket.IO for collaborative editing and presence tracking
+4. **Desktop Distribution**: Flatpak packaging with Electron wrapper
+5. **External Services**: GitHub API, OpenAI API, actionlint, and OAuth providers
 
 ## System Architecture
 
 ```ascii
-┌─────────────────────────────────────────────────────────────┐
-│                           Frontend (React)                  │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
-│  │   UI Layer  │  │ State Mgmt   │  │  API Client        │  │
-│  │  - React    │  │  - Zustand   │  │  - Axios           │  │
-│  │  - ReactFlow│  │  - Hooks     │  │  - WebSocket       │  │
-│  └─────────────┘  └──────────────┘  └────────────────────┘  │
-└─────────────────────────────┬───────────────────────────────┘
-                              │ HTTPS/WSS
-┌─────────────────────────────┴───────────────────────────────┐
-│                         Backend (Node.js)                   │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
-│  │  API Layer  │  │Service Layer │  │  Data Layer        │  │
-│  │  - Express  │  │ - Business   │  │  - MongoDB         │  │
-│  │  - REST     │  │   Logic      │  │  - Mongoose        │  │
-│  └─────────────┘  └──────────────┘  └────────────────────┘  │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-┌─────────────────────────────┴───────────────────────────────┐
-│                      External Services                      │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐  │
-│  │ GitHub API  │  │  OpenAI API  │  │   actionlint       │  │
-│  │ - Actions   │  │  - GPT-4     │  │  - Validation      │  │
-│  │ - Repos     │  │  - Workflow  │  │  - Linting         │  │
-│  └─────────────┘  └──────────────┘  └────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                        Frontend (React)                          │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐  ┌──────────────┐    │
+│  │ UI Layer │  │State Mgmt │  │API Client│  │ WebSocket    │    │
+│  │ - React  │  │ - Zustand │  │ - Axios  │  │ - Socket.IO  │    │
+│  │ - Flow   │  │ - Hooks   │  │ - Auth   │  │ - Real-time  │    │
+│  └──────────┘  └───────────┘  └──────────┘  └──────────────┘    │
+└─────────────────────────┬───────────────────────┬────────────────┘
+                          │ HTTPS                 │ WSS
+┌─────────────────────────┴───────────────────────┴────────────────┐
+│                       Backend (Node.js)                          │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐  ┌──────────────┐    │
+│  │API Layer │  │ Services  │  │Data Layer│  │ WebSocket    │    │
+│  │- Express │  │- Business │  │- MongoDB │  │- Socket.IO   │    │
+│  │- REST    │  │- Email    │  │- Mongoose│  │- Presence    │    │
+│  │- Auth    │  │- GitHub   │  │- Caching │  │- Cursors     │    │
+│  │- OAuth   │  │- AI       │  │          │  │- Locks       │    │
+│  └──────────┘  └───────────┘  └──────────┘  └──────────────┘    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │                 Middleware Layer                         │    │
+│  │  - JWT Auth - Per-User Rate Limiting - CORS - Helmet    │    │
+│  └──────────────────────────────────────────────────────────┘    │
+└─────────────────────────┬────────────────────────────────────────┘
+                          │
+┌─────────────────────────┴────────────────────────────────────────┐
+│                      External Services                           │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐     │
+│  │GitHub API│  │OpenAI API│  │actionlint│  │ OAuth Providers│    │
+│  │- Actions │  │- GPT-4   │  │- Validate│  │- GitHub      │     │
+│  │- Repos   │  │- Workflow│  │- Linting │  │- Google      │     │
+│  │- Deploy  │  │- Optimize│  │          │  │- Microsoft   │     │
+│  │- PRs     │  │          │  │          │  │- GitLab      │     │
+│  │          │  │          │  │          │  │- Bitbucket   │     │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Frontend Architecture
@@ -51,8 +62,10 @@ FlowForge is a full-stack web application built with a modern microservices-orie
 - **UI Library**: React Flow for visual workflow building
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand (global state), React hooks (local state)
-- **HTTP Client**: Axios
+- **HTTP Client**: Axios with JWT interceptors
+- **Real-time**: Socket.IO Client for collaborative features
 - **Icons**: Lucide React
+- **Routing**: React Router v6
 
 ### Component Structure
 
@@ -95,9 +108,12 @@ frontend/src/
 - **Runtime**: Node.js 18+
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose ODM
-- **Authentication**: Session-based (prepared for JWT)
+- **Authentication**: JWT-based with Passport.js (5 OAuth providers)
+- **Real-time**: Socket.IO for WebSocket connections
 - **API Integration**: Octokit (GitHub), OpenAI SDK
-- **Security**: Helmet, CORS, Rate Limiting
+- **Email**: Nodemailer with SMTP support
+- **Security**: Helmet, CORS, Per-User Rate Limiting, JWT
+- **OAuth Providers**: GitHub, Google, Microsoft, GitLab, Bitbucket
 - **Logging**: Morgan
 
 ### API Structure

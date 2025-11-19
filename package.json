@@ -1,5 +1,66 @@
 {
+  "name": "flowforge",
+  "version": "0.5.0",
+  "description": "Visual GitHub Actions Workflow Builder - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test -- --run",
+    "test:e2e": "cd frontend && npm run test:e2e",
+    "test:coverage": "npm run test:backend -- --coverage && npm run test:frontend -- --coverage",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:fix": "npm run lint:backend -- --fix && npm run lint:frontend -- --fix",
+    "seed": "cd backend && npm run seed",
+    "update-actions": "cd backend && npm run update-actions",
+    "validate-env": "cd backend && npm run validate-env",
+    "health": "curl http://localhost:3002/api/health && curl http://localhost:5173/",
+    "logs": "tail -f logs/application-$(date +%Y-%m-%d).log",
+    "logs:error": "tail -f logs/error-$(date +%Y-%m-%d).log",
+    "backup": "bash scripts/backup.sh",
+    "restore": "bash scripts/restore.sh",
+    "security-audit": "bash scripts/security-audit.sh",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:production": "bash scripts/deploy.sh production",
+    "rollback": "bash scripts/rollback.sh",
+    "docker:build": "docker-compose -f docker-compose.prod.yml build",
+    "docker:up": "docker-compose -f docker-compose.prod.yml up -d",
+    "docker:down": "docker-compose -f docker-compose.prod.yml down",
+    "docker:logs": "docker-compose -f docker-compose.prod.yml logs -f",
+    "docker:restart": "npm run docker:down && npm run docker:up",
+    "clean": "rm -rf backend/node_modules frontend/node_modules node_modules",
+    "clean:logs": "rm -rf logs/*.log",
+    "clean:all": "npm run clean && rm -rf dist build coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/flowforge.git"
+  },
+  "keywords": [
+    "github-actions",
+    "workflow-builder",
+    "ci-cd",
+    "automation",
+    "devops",
+    "visual-editor",
+    "ai-assisted"
+  ],
+  "author": "FlowForge Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "devDependencies": {
-    "@vitest/coverage-v8": "^3.2.4"
+    "@vitest/coverage-v8": "^3.2.4",
+    "concurrently": "^8.2.2"
   }
 }

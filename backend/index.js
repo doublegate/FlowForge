@@ -34,6 +34,22 @@ const { promisify } = require('util');
 const fs = require('fs').promises;
 const path = require('path');
 
+// Import utilities
+const logger = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+const errorLogger = require('./middleware/errorLogger');
+
+// Import route modules
+const authRoutes = require('./routes/auth');
+const workflowRoutes = require('./routes/workflows');
+const analyticsRoutes = require('./routes/analytics');
+const githubRoutes = require('./routes/github');
+const commentsRoutes = require('./routes/comments');
+
+// Import services
+const scheduler = require('./services/scheduler');
+const websocketService = require('./services/websocketService');
+
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
@@ -52,13 +68,13 @@ const octokit = new Octokit({
 
 // Log GitHub authentication status
 if (!githubToken) {
-  console.warn('WARNING: No GitHub token provided. API requests will be rate limited to 60/hour.');
+  logger.warn('No GitHub token provided. API requests will be rate limited to 60/hour.');
 } else if (githubToken.startsWith('ghp_')) {
-  console.log('GitHub token detected (personal access token)');
+  logger.info('GitHub token detected (personal access token)');
 } else if (githubToken.startsWith('ghs_')) {
-  console.log('GitHub token detected (OAuth app token)');
+  logger.info('GitHub token detected (OAuth app token)');
 } else {
-  console.warn('WARNING: GitHub token format may be invalid');
+  logger.warn('GitHub token format may be invalid');
 }
 
 const openai = new OpenAI({
@@ -69,7 +85,7 @@ const openai = new OpenAI({
 app.use(helmet()); // Security headers
 app.use(cors()); // Enable CORS
 app.use(express.json()); // Parse JSON bodies
-app.use(morgan('combined')); // Logging
+app.use(requestLogger); // Request logging with Winston
 
 // Rate limiting for API endpoints
 const apiLimiter = rateLimit({
@@ -157,7 +173,7 @@ const WorkflowTemplate = mongoose.model('WorkflowTemplate', WorkflowTemplateSche
 const WorkflowSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
-  userId: String, // For future user authentication
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Owner of the workflow
   nodes: [{
     id: String,
     type: String,
@@ -180,6 +196,10 @@ const WorkflowSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add indexes for performance
+WorkflowSchema.index({ userId: 1, createdAt: -1 });
+WorkflowSchema.index({ isPublic: 1, createdAt: -1 });
 
 const Workflow = mongoose.model('Workflow', WorkflowSchema);
 
@@ -527,37 +547,84 @@ Please ensure the workflow includes:
  */
 async function validateWorkflow(yamlContent) {
   const execFileAsync = promisify(execFile);
-  
+
   // Input validation and sanitization
   if (typeof yamlContent !== 'string') {
     return {
       valid: false,
-      errors: ['Invalid YAML content: must be a string']
+      errors: [{ message: 'Invalid YAML content: must be a string', severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Limit YAML size to prevent DoS
   if (yamlContent.length > 100000) { // 100KB limit
     return {
       valid: false,
-      errors: ['YAML content too large (max 100KB)']
+      errors: [{ message: 'YAML content too large (max 100KB)', severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Basic YAML structure validation
   try {
     yaml.load(yamlContent);
   } catch (yamlError) {
     return {
       valid: false,
-      errors: [`Invalid YAML syntax: ${yamlError.message}`]
+      errors: [{ message: `Invalid YAML syntax: ${yamlError.message}`, severity: 'error' }],
+      warnings: [],
+      suggestions: []
     };
   }
-  
+
   // Generate secure temp filename with random suffix
   const randomSuffix = Math.random().toString(36).substring(2, 15);
   const tempFile = path.join(__dirname, `temp_workflow_${Date.now()}_${randomSuffix}.yml`);
-  
+
+  /**
+   * Parse actionlint output line
+   * Format: filename:line:col: message [rule-name]
+   */
+  const parseActionlintLine = (line) => {
+    if (!line.trim()) return null;
+
+    // Match pattern: filename:line:col: message [rule-name]
+    const match = line.match(/^(.+?):(\d+):(\d+):\s*(.+?)(?:\s+\[(.+?)\])?$/);
+
+    if (match) {
+      const [, , lineNum, colNum, message, rule] = match;
+
+      // Determine severity based on keywords
+      let severity = 'warning';
+      const lowerMessage = message.toLowerCase();
+
+      if (lowerMessage.includes('error') || lowerMessage.includes('invalid') || lowerMessage.includes('required')) {
+        severity = 'error';
+      } else if (lowerMessage.includes('deprecated') || lowerMessage.includes('recommend') || lowerMessage.includes('should')) {
+        severity = 'info';
+      }
+
+      return {
+        line: parseInt(lineNum),
+        column: parseInt(colNum),
+        message: message.trim(),
+        severity,
+        rule: rule || undefined
+      };
+    }
+
+    // Fallback for unformatted lines
+    return {
+      line: 0,
+      column: 0,
+      message: line.trim(),
+      severity: 'warning'
+    };
+  };
+
   try {
     // Sanitize YAML content before writing - remove control characters
     const sanitizedContent = yamlContent
@@ -567,29 +634,46 @@ async function validateWorkflow(yamlContent) {
         return code >= 32 || code === 9 || code === 10 || code === 13;
       }).join('')
       .substring(0, 100000); // Enforce size limit
-    
+
     // Write YAML to temporary file
     await fs.writeFile(tempFile, sanitizedContent, { mode: 0o600 }); // Restrict file permissions
-    
+
     // Run actionlint using execFile for security (prevents shell injection)
-    const { stderr } = await execFileAsync('actionlint', [tempFile], {
+    // Use -format option for structured output
+    const { stdout, stderr } = await execFileAsync('actionlint', ['-format', '{{range $ }}{{$.filepath}}:{{$.line}}:{{$.column}}: {{$.message}} [{{$.kind}}]{{"\n"}}{{end}}', tempFile], {
       timeout: 10000, // 10 second timeout
       maxBuffer: 1024 * 1024 // 1MB max output
     });
-    
+
     // Clean up temp file
     await fs.unlink(tempFile);
-    
-    if (stderr) {
-      return {
-        valid: false,
-        errors: stderr.split('\n').filter(line => line.trim())
-      };
-    }
-    
+
+    // Parse output
+    const errors = [];
+    const warnings = [];
+    const suggestions = [];
+
+    // Process stdout (actionlint outputs to stdout)
+    const outputLines = (stdout || stderr || '').split('\n').filter(line => line.trim());
+
+    outputLines.forEach(line => {
+      const parsed = parseActionlintLine(line);
+      if (parsed) {
+        if (parsed.severity === 'error') {
+          errors.push(parsed);
+        } else if (parsed.severity === 'info') {
+          suggestions.push(parsed.message);
+        } else {
+          warnings.push(parsed);
+        }
+      }
+    });
+
     return {
-      valid: true,
-      errors: []
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      suggestions
     };
   } catch (error) {
     // Clean up temp file on error
@@ -599,35 +683,72 @@ async function validateWorkflow(yamlContent) {
       // Log cleanup error but don't throw - the main error is more important
       console.debug(`Failed to clean up temp file ${tempFile}: ${cleanupError.message}`);
     }
-    
+
     // Handle different types of errors
     if (error.code === 'ENOENT') {
       return {
         valid: false,
-        errors: ['actionlint not found - please install actionlint binary']
+        errors: [{ message: 'actionlint not found - please install actionlint binary', severity: 'error' }],
+        warnings: [],
+        suggestions: []
       };
     }
-    
+
     if (error.killed || error.signal === 'SIGTERM') {
       return {
         valid: false,
-        errors: ['Validation timeout - YAML file too complex']
+        errors: [{ message: 'Validation timeout - YAML file too complex', severity: 'error' }],
+        warnings: [],
+        suggestions: []
       };
     }
-    
-    // Parse actionlint errors from stdout
-    const errors = error.stdout ? 
-      error.stdout.split('\n').filter(line => line.trim()) : 
-      [`Validation error: ${error.message}`];
-    
+
+    // Parse actionlint errors/warnings from stdout
+    const errors = [];
+    const warnings = [];
+    const suggestions = [];
+
+    if (error.stdout || error.stderr) {
+      const outputLines = ((error.stdout || '') + (error.stderr || '')).split('\n').filter(line => line.trim());
+
+      outputLines.forEach(line => {
+        const parsed = parseActionlintLine(line);
+        if (parsed) {
+          if (parsed.severity === 'error') {
+            errors.push(parsed);
+          } else if (parsed.severity === 'info') {
+            suggestions.push(parsed.message);
+          } else {
+            warnings.push(parsed);
+          }
+        }
+      });
+    }
+
+    // If no parsed errors, add generic error
+    if (errors.length === 0 && warnings.length === 0) {
+      errors.push({ message: `Validation error: ${error.message}`, severity: 'error', line: 0, column: 0 });
+    }
+
     return {
       valid: false,
-      errors
+      errors,
+      warnings,
+      suggestions
     };
   }
 }
 
 // API Routes
+
+/**
+ * API Routes
+ */
+app.use('/api/auth', authRoutes);
+app.use('/api/workflows', workflowRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/github', githubRoutes);
+app.use('/api/comments', commentsRoutes);
 
 /**
  * GET /api/actions
@@ -919,24 +1040,47 @@ app.post('/api/workflows/optimize', apiLimiter, async (req, res) => {
 /**
  * GET /api/workflows
  * Get all workflows (with pagination)
+ * Optional auth - if authenticated, shows user's workflows + public workflows
+ * If not authenticated, shows only public workflows
  */
-app.get('/api/workflows', apiLimiter, async (req, res) => {
+app.get('/api/workflows', apiLimiter, optionalAuth, async (req, res) => {
   try {
     // Input validation and sanitization for pagination
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;
-    
-    const query = req.query.public === 'true' ? { isPublic: true } : {};
-    
+
+    // Build query based on authentication and filters
+    let query = {};
+
+    if (req.query.public === 'true') {
+      // Only public workflows
+      query = { isPublic: true };
+    } else if (req.query.mine === 'true' && req.userId) {
+      // Only user's workflows
+      query = { userId: req.userId };
+    } else if (req.userId) {
+      // User's workflows + public workflows
+      query = {
+        $or: [
+          { userId: req.userId },
+          { isPublic: true }
+        ]
+      };
+    } else {
+      // Not authenticated - only public workflows
+      query = { isPublic: true };
+    }
+
     const workflows = await Workflow.find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
-      .select('-yaml'); // Exclude yaml for list view
-    
+      .select('-yaml') // Exclude yaml for list view
+      .populate('userId', 'username displayName');
+
     const total = await Workflow.countDocuments(query);
-    
+
     res.json({
       workflows,
       pagination: {
@@ -955,15 +1099,25 @@ app.get('/api/workflows', apiLimiter, async (req, res) => {
 /**
  * GET /api/workflows/:id
  * Get a specific workflow
+ * Optional auth - public workflows accessible to all, private workflows only to owner
  */
-app.get('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.get('/api/workflows/:id', apiLimiter, optionalAuth, async (req, res) => {
   try {
-    const workflow = await Workflow.findById(req.params.id);
-    
+    const workflow = await Workflow.findById(req.params.id)
+      .populate('userId', 'username displayName');
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check access permissions
+    if (!workflow.isPublic) {
+      // Private workflow - check if user is the owner
+      if (!req.userId || workflow.userId._id.toString() !== req.userId) {
+        return res.status(403).json({ error: 'Access denied to private workflow' });
+      }
+    }
+
     res.json(workflow);
   } catch (error) {
     console.error('Error fetching workflow:', error);
@@ -973,44 +1127,45 @@ app.get('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * POST /api/workflows
- * Create a new workflow
+ * Create a new workflow (requires authentication)
  */
-app.post('/api/workflows', apiLimiter, async (req, res) => {
+app.post('/api/workflows', apiLimiter, authenticate, async (req, res) => {
   try {
     const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
-    
+
     // Input validation
     if (!name || !nodes || !edges) {
       return res.status(400).json({ error: 'Name, nodes, and edges are required' });
     }
-    
+
     // Sanitize string inputs
     const sanitizedName = String(name).substring(0, 200).trim();
     const sanitizedDescription = description ? String(description).substring(0, 1000).trim() : undefined;
     const sanitizedYaml = yaml ? String(yaml).substring(0, 50000) : undefined;
-    
+
     // Validate arrays
     if (!Array.isArray(nodes) || !Array.isArray(edges)) {
       return res.status(400).json({ error: 'Nodes and edges must be arrays' });
     }
-    
+
     // Validate tags if provided
-    const sanitizedTags = Array.isArray(tags) ? 
-      tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+    const sanitizedTags = Array.isArray(tags) ?
+      tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) :
       undefined;
-    
+
     const workflow = new Workflow({
       name: sanitizedName,
       description: sanitizedDescription,
+      userId: req.userId, // Set from authenticated user
       nodes: nodes.slice(0, 100), // Limit number of nodes
       edges: edges.slice(0, 200), // Limit number of edges
       yaml: sanitizedYaml,
       tags: sanitizedTags,
       isPublic: Boolean(isPublic)
     });
-    
+
     await workflow.save();
-    
+
     res.status(201).json(workflow);
   } catch (error) {
     console.error('Error creating workflow:', error);
@@ -1020,18 +1175,23 @@ app.post('/api/workflows', apiLimiter, async (req, res) => {
 
 /**
  * PUT /api/workflows/:id
- * Update a workflow
+ * Update a workflow (requires authentication and ownership)
  */
-app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.put('/api/workflows/:id', apiLimiter, authenticate, async (req, res) => {
   try {
     const { name, description, nodes, edges, yaml, tags, isPublic } = req.body;
-    
+
     const workflow = await Workflow.findById(req.params.id);
-    
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check ownership
+    if (workflow.userId && workflow.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to edit this workflow' });
+    }
+
     // Update fields with sanitization
     if (name !== undefined) {
       workflow.name = String(name).substring(0, 200).trim();
@@ -1055,16 +1215,16 @@ app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
       workflow.yaml = yaml ? String(yaml).substring(0, 50000) : '';
     }
     if (tags !== undefined) {
-      workflow.tags = Array.isArray(tags) ? 
-        tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) : 
+      workflow.tags = Array.isArray(tags) ?
+        tags.slice(0, 20).map(tag => String(tag).substring(0, 50).trim()) :
         [];
     }
     if (isPublic !== undefined) {
       workflow.isPublic = Boolean(isPublic);
     }
-    
+
     await workflow.save();
-    
+
     res.json(workflow);
   } catch (error) {
     console.error('Error updating workflow:', error);
@@ -1074,18 +1234,23 @@ app.put('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * DELETE /api/workflows/:id
- * Delete a workflow
+ * Delete a workflow (requires authentication and ownership)
  */
-app.delete('/api/workflows/:id', apiLimiter, async (req, res) => {
+app.delete('/api/workflows/:id', apiLimiter, authenticate, async (req, res) => {
   try {
     const workflow = await Workflow.findById(req.params.id);
-    
+
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
+    // Check ownership
+    if (workflow.userId && workflow.userId.toString() !== req.userId) {
+      return res.status(403).json({ error: 'You do not have permission to delete this workflow' });
+    }
+
     await workflow.deleteOne();
-    
+
     res.json({ message: 'Workflow deleted successfully' });
   } catch (error) {
     console.error('Error deleting workflow:', error);
@@ -1095,23 +1260,24 @@ app.delete('/api/workflows/:id', apiLimiter, async (req, res) => {
 
 /**
  * POST /api/workflows/:id/fork
- * Fork a public workflow
+ * Fork a public workflow (requires authentication)
  */
-app.post('/api/workflows/:id/fork', apiLimiter, async (req, res) => {
+app.post('/api/workflows/:id/fork', apiLimiter, authenticate, async (req, res) => {
   try {
     const originalWorkflow = await Workflow.findById(req.params.id);
-    
+
     if (!originalWorkflow) {
       return res.status(404).json({ error: 'Workflow not found' });
     }
-    
+
     if (!originalWorkflow.isPublic) {
       return res.status(403).json({ error: 'Cannot fork private workflow' });
     }
-    
+
     const forkedWorkflow = new Workflow({
       name: `${originalWorkflow.name} (Fork)`,
       description: originalWorkflow.description,
+      userId: req.userId, // Set to current user
       nodes: originalWorkflow.nodes,
       edges: originalWorkflow.edges,
       yaml: originalWorkflow.yaml,
@@ -1119,9 +1285,9 @@ app.post('/api/workflows/:id/fork', apiLimiter, async (req, res) => {
       isPublic: false,
       forkedFrom: originalWorkflow._id
     });
-    
+
     await forkedWorkflow.save();
-    
+
     res.status(201).json(forkedWorkflow);
   } catch (error) {
     console.error('Error forking workflow:', error);
@@ -1192,8 +1358,8 @@ app.get('/api/github/test', async (req, res) => {
 app.post('/api/actions/update', async (req, res) => {
   try {
     // Start the update in the background
-    updateActionDatabase().catch(console.error);
-    
+    updateActionDatabase().catch(err => logger.logError(err, { operation: 'updateActionDatabase' }));
+
     res.json({
       message: 'Action database update started',
       hint: 'Check server logs for progress'
@@ -1206,59 +1372,106 @@ app.post('/api/actions/update', async (req, res) => {
   }
 });
 
+// Error handling middleware (must be after all routes)
+app.use(errorLogger);
+
+// Global error handler
+app.use((err, req, res, next) => {
+  const statusCode = err.statusCode || 500;
+
+  res.status(statusCode).json({
+    error: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  });
+});
+
+// 404 handler for undefined routes
+app.use((req, res) => {
+  logger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`, {
+    ip: req.ip,
+    userAgent: req.get('user-agent')
+  });
+
+  res.status(404).json({
+    error: 'Not Found',
+    message: `Route ${req.method} ${req.originalUrl} not found`
+  });
+});
+
 // Initialize server
 async function startServer() {
   try {
     // Wait for MongoDB connection FIRST
     await mongoose.connection.asPromise();
-    console.log('Connected to MongoDB');
+    logger.info('Connected to MongoDB');
 
     // Only start server AFTER database is confirmed working
     server = app.listen(PORT, (err) => {
       if (err) {
-        console.error('Failed to start server:', err);
+        logger.error('Failed to start server', err);
         process.exit(1);
       }
-      console.log(`FlowForge API server running on port ${PORT}`);
-      console.log(`Server PID: ${process.pid}`);
+      logger.info(`FlowForge API server running on port ${PORT}`);
+      logger.info(`Server PID: ${process.pid}`);
+
+      // Initialize WebSocket service for real-time collaboration
+      websocketService.initialize(server);
+      logger.info('WebSocket service initialized for real-time collaboration');
     });
 
     // Schedule periodic updates (every 6 hours)
-    setInterval(updateActionDatabase, 6 * 60 * 60 * 1000);
+    setInterval(() => {
+      updateActionDatabase().catch(err => logger.logError(err, { operation: 'scheduledUpdate' }));
+    }, 6 * 60 * 60 * 1000);
 
     // Perform initial update if database is empty
     const actionCount = await Action.countDocuments();
     if (actionCount === 0) {
-      console.log('Database is empty, performing initial update...');
-      updateActionDatabase();
+      logger.info('Database is empty, performing initial update...');
+      updateActionDatabase().catch(err => logger.logError(err, { operation: 'initialUpdate' }));
     }
+
+    // Initialize workflow scheduler
+    logger.info('Initializing workflow scheduler...');
+    await scheduler.initialize();
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', error);
     process.exit(1);
   }
 }
 
 // Handle graceful shutdown
 const gracefulShutdown = async (signal) => {
-  console.log(`\n${signal} received, starting graceful shutdown...`);
-  
+  logger.info(`${signal} received, starting graceful shutdown...`);
+
+  // Stop workflow scheduler
+  logger.info('Stopping workflow scheduler...');
+  scheduler.shutdown();
+
+  // Disconnect all WebSocket clients
+  if (websocketService.io) {
+    logger.info('Closing WebSocket connections...');
+    websocketService.io.close();
+    logger.info('WebSocket connections closed');
+  }
+
   // Stop accepting new connections
   if (server) {
-    console.log('Closing HTTP server...');
+    logger.info('Closing HTTP server...');
     await new Promise((resolve) => {
       server.close(resolve);
     });
-    console.log('HTTP server closed');
+    logger.info('HTTP server closed');
   }
-  
+
   // Close database connection
   if (mongoose.connection.readyState === 1) {
-    console.log('Closing MongoDB connection...');
+    logger.info('Closing MongoDB connection...');
     await mongoose.connection.close();
-    console.log('MongoDB connection closed');
+    logger.info('MongoDB connection closed');
   }
-  
-  console.log('Graceful shutdown complete');
+
+  logger.info('Graceful shutdown complete');
   process.exit(0);
 };
 

@@ -1,15 +1,26 @@
 {
   "name": "flowforge-frontend",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "description": "Frontend for FlowForge - Visual GitHub Actions Workflow Builder",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:analyze": "vite build --mode analyze",
     "preview": "vite preview",
     "test": "vitest",
-    "lint": "eslint src --ext js,jsx,ts,tsx"
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint src --ext js,jsx,ts,tsx",
+    "lint:fix": "eslint src --ext js,jsx,ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md}\"",
+    "clean": "rm -rf dist node_modules/.vite",
+    "docker:build": "docker build -f Dockerfile.prod -t flowforge-frontend:latest .",
+    "docker:run": "docker run -p 8080:8080 flowforge-frontend:latest"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -19,6 +30,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
+    "react-router-dom": "^7.9.6",
     "reactflow": "^11.10.1",
     "zustand": "^4.4.7"
   },

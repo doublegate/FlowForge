@@ -18,7 +18,7 @@ interface WorkflowSuggestionsProps {
 
 export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
   nodes,
-  edges: _edges,
+  edges,
   onClose,
   onApplySuggestion
 }) => {
@@ -28,6 +28,169 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [expandedSuggestions, setExpandedSuggestions] = useState<Set<number>>(new Set());
   const [context, setContext] = useState('');
+
+  /**
+   * Analyze edges to detect workflow structure and optimization opportunities
+   */
+  const analyzeWorkflowStructure = () => {
+    const edgeSuggestions: Suggestion[] = [];
+
+    // Build dependency graph
+    const dependencies: Record<string, Set<string>> = {};
+    const dependents: Record<string, Set<string>> = {};
+
+    nodes.forEach(node => {
+      dependencies[node.id] = new Set();
+      dependents[node.id] = new Set();
+    });
+
+    edges.forEach(edge => {
+      dependencies[edge.target].add(edge.source);
+      dependents[edge.source].add(edge.target);
+    });
+
+    // Find nodes that can run in parallel (no dependencies on each other)
+    const parallelizableGroups: string[][] = [];
+    const visited = new Set<string>();
+
+    nodes.forEach(node => {
+      if (!visited.has(node.id)) {
+        const group: string[] = [node.id];
+        visited.add(node.id);
+
+        nodes.forEach(otherNode => {
+          if (!visited.has(otherNode.id)) {
+            // Check if they can run in parallel (no dependency chain between them)
+            const hasPathToOther = hasPath(node.id, otherNode.id, dependencies);
+            const hasPathFromOther = hasPath(otherNode.id, node.id, dependencies);
+
+            if (!hasPathToOther && !hasPathFromOther) {
+              group.push(otherNode.id);
+              visited.add(otherNode.id);
+            }
+          }
+        });
+
+        if (group.length > 1) {
+          parallelizableGroups.push(group);
+        }
+      }
+    });
+
+    // Suggest parallelization if found
+    if (parallelizableGroups.length > 0) {
+      parallelizableGroups.forEach(group => {
+        const nodeNames = group.map(id => nodes.find(n => n.id === id)?.data.name || id);
+        edgeSuggestions.push({
+          type: 'performance',
+          priority: 'high',
+          title: 'Parallelize Independent Steps',
+          description: `Steps "${nodeNames.join('", "')}" can run in parallel since they don't depend on each other.`,
+          impact: `Could reduce workflow execution time by running ${group.length} steps concurrently instead of sequentially.`,
+          implementation: `Split these steps into separate jobs with no 'needs' dependencies, or use matrix strategy to run them in parallel.`
+        });
+      });
+    }
+
+    // Find bottlenecks (nodes with many dependents)
+    Object.entries(dependents).forEach(([nodeId, deps]) => {
+      if (deps.size >= 3) {
+        const node = nodes.find(n => n.id === nodeId);
+        edgeSuggestions.push({
+          type: 'performance',
+          priority: 'medium',
+          title: 'Potential Bottleneck Detected',
+          description: `Step "${node?.data.name}" has ${deps.size} dependent steps waiting for it to complete.`,
+          impact: 'Optimizing this step could significantly improve overall workflow time.',
+          implementation: 'Consider caching outputs, optimizing the action, or splitting into smaller parallel tasks.'
+        });
+      }
+    });
+
+    // Find long chains (critical path)
+    const criticalPath = findLongestPath(nodes, edges);
+    if (criticalPath.length >= 5) {
+      const pathNames = criticalPath.map(id => nodes.find(n => n.id === id)?.data.name || id);
+      edgeSuggestions.push({
+        type: 'best-practice',
+        priority: 'low',
+        title: 'Long Sequential Chain Detected',
+        description: `Workflow has a chain of ${criticalPath.length} sequential steps: ${pathNames.slice(0, 3).join(' → ')}...`,
+        impact: 'Long chains increase total execution time and reduce parallelization opportunities.',
+        implementation: 'Review if some steps can be reordered or run in parallel. Consider using job matrices.'
+      });
+    }
+
+    // Check for isolated nodes
+    const isolatedNodes = nodes.filter(node =>
+      dependencies[node.id].size === 0 && dependents[node.id].size === 0
+    );
+
+    if (isolatedNodes.length > 0 && nodes.length > isolatedNodes.length) {
+      isolatedNodes.forEach(node => {
+        edgeSuggestions.push({
+          type: 'reliability',
+          priority: 'medium',
+          title: 'Isolated Step Found',
+          description: `Step "${node.data.name}" has no connections to other steps.`,
+          impact: 'Isolated steps may indicate missing dependencies or unnecessary actions.',
+          implementation: 'Verify this step is needed and connect it to the workflow, or remove if unnecessary.'
+        });
+      });
+    }
+
+    return edgeSuggestions;
+  };
+
+  /**
+   * Check if there's a path from source to target in the dependency graph
+   */
+  const hasPath = (source: string, target: string, deps: Record<string, Set<string>>): boolean => {
+    const visited = new Set<string>();
+    const queue = [source];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === target) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+
+      const nextNodes = deps[current] || new Set();
+      queue.push(...Array.from(nextNodes));
+    }
+
+    return false;
+  };
+
+  /**
+   * Find the longest path in the workflow (critical path)
+   */
+  const findLongestPath = (nodes: FlowNode[], edges: FlowEdge[]): string[] => {
+    const deps: Record<string, Set<string>> = {};
+    nodes.forEach(node => {
+      deps[node.id] = new Set();
+    });
+    edges.forEach(edge => {
+      deps[edge.target].add(edge.source);
+    });
+
+    let longestPath: string[] = [];
+
+    const dfs = (nodeId: string, path: string[]): void => {
+      const newPath = [...path, nodeId];
+      if (newPath.length > longestPath.length) {
+        longestPath = newPath;
+      }
+
+      const next = nodes.filter(n => deps[n.id].has(nodeId));
+      next.forEach(n => dfs(n.id, newPath));
+    };
+
+    // Start DFS from nodes with no dependencies
+    nodes.filter(n => deps[n.id].size === 0).forEach(n => dfs(n.id, []));
+
+    return longestPath;
+  };
 
   const getSuggestions = async () => {
     if (nodes.length === 0) {
@@ -39,7 +202,10 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
       setLoading(true);
       setError(null);
 
-      // Build workflow structure from nodes and edges
+      // Analyze workflow structure from edges
+      const structuralSuggestions = analyzeWorkflowStructure();
+
+      // Build workflow structure from nodes and edges for AI analysis
       const workflow = {
         name: 'Current Workflow',
         on: ['push'],
@@ -50,7 +216,7 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
               const step: Record<string, unknown> = {
                 name: node.data.name
               };
-              
+
               if (node.data.repository === 'run') {
                 step.run = node.data.inputs?.command || 'echo "Command"';
               } else {
@@ -59,7 +225,7 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
                   step.with = node.data.inputs;
                 }
               }
-              
+
               return step;
             })
           }
@@ -69,8 +235,14 @@ export const WorkflowSuggestions: React.FC<WorkflowSuggestionsProps> = ({
       const response = await apiService.getSuggestions(workflow, context);
       const result = response.data;
 
-      setSuggestions(result.suggestions || []);
-      setSummary(result.summary || '');
+      // Combine structural suggestions with AI suggestions
+      const allSuggestions = [
+        ...structuralSuggestions,
+        ...(result.suggestions || [])
+      ];
+
+      setSuggestions(allSuggestions);
+      setSummary(result.summary || `Analyzed ${nodes.length} steps and ${edges.length} dependencies.`);
     } catch (err) {
       console.error('Failed to get suggestions:', err);
       setError((err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to get suggestions. Please try again.');

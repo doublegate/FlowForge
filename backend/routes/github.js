@@ -40,11 +40,12 @@ router.get('/repositories', authenticateToken, async (req, res) => {
       });
     }
 
-    const { sort, page } = req.query;
+    const { sort, page, checkWorkflows } = req.query;
 
     const repositories = await getUserRepositories(user.githubAccessToken, {
       sort,
-      page: parseInt(page) || 1
+      page: parseInt(page) || 1,
+      checkWorkflows: checkWorkflows === 'true' // Optional: only check if explicitly requested
     });
 
     logger.info('Fetched GitHub repositories', {

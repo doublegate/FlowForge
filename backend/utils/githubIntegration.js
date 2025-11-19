@@ -30,13 +30,19 @@ function createGitHubClient(accessToken) {
  *
  * @param {string} accessToken - User's GitHub access token
  * @param {Object} options - Options for filtering repositories
+ * @param {boolean} options.checkWorkflows - Whether to check for workflows (default: false to avoid N+1 API calls)
  * @returns {Promise<Array>} List of repositories
  */
 async function getUserRepositories(accessToken, options = {}) {
   try {
     const octokit = createGitHubClient(accessToken);
 
-    const { sort = 'updated', per_page = 100, page = 1 } = options;
+    const { 
+      sort = 'updated', 
+      per_page = 100, 
+      page = 1,
+      checkWorkflows = false // Default to false to avoid N+1 API calls
+    } = options;
 
     const { data } = await octokit.repos.listForAuthenticatedUser({
       sort,
@@ -45,39 +51,64 @@ async function getUserRepositories(accessToken, options = {}) {
       visibility: 'all'
     });
 
-    // For each repo, check if .github/workflows contains any files
-    const workflowChecks = await Promise.all(data.map(async repo => {
-      let hasWorkflows = false;
-      try {
-        const contents = await octokit.repos.getContent({
-          owner: repo.owner.login,
-          repo: repo.name,
-          path: '.github/workflows',
-          ref: repo.default_branch
-        });
-        // If the directory exists and contains files, set hasWorkflows to true
-        if (Array.isArray(contents.data) && contents.data.length > 0) {
-          hasWorkflows = true;
-        }
-      } catch (err) {
-        if (err.status !== 404) {
-          // Log unexpected errors, but ignore 404 (directory not found)
-          logger.logError(err, { context: 'Check workflows for repo', repo: repo.full_name });
-        }
-      }
-      return {
-        id: repo.id,
-        name: repo.name,
-        fullName: repo.full_name,
-        owner: repo.owner.login,
-        private: repo.private,
-        description: repo.description,
-        defaultBranch: repo.default_branch,
-        url: repo.html_url,
-        hasWorkflows
-      };
+    // Map basic repository data first
+    const repositories = data.map(repo => ({
+      id: repo.id,
+      name: repo.name,
+      fullName: repo.full_name,
+      owner: repo.owner.login,
+      private: repo.private,
+      description: repo.description,
+      defaultBranch: repo.default_branch,
+      url: repo.html_url,
+      hasWorkflows: null // null indicates not checked yet
     }));
-    return workflowChecks;
+
+    // Only check for workflows if explicitly requested (to avoid N+1 API calls)
+    if (checkWorkflows) {
+      // Use Promise.allSettled to prevent one failing repo from breaking all results
+      const workflowChecks = await Promise.allSettled(
+        repositories.map(async repo => {
+          try {
+            const contents = await octokit.repos.getContent({
+              owner: repo.owner,
+              repo: repo.name,
+              path: '.github/workflows',
+              ref: repo.defaultBranch
+            });
+            // If the directory exists and contains files, set hasWorkflows to true
+            return {
+              id: repo.id,
+              hasWorkflows: Array.isArray(contents.data) && contents.data.length > 0
+            };
+          } catch (err) {
+            // On any error (404, permissions, etc.), default to false
+            if (err.status !== 404) {
+              logger.logError(err, { 
+                context: 'Check workflows for repo', 
+                repo: repo.fullName 
+              });
+            }
+            return { id: repo.id, hasWorkflows: false };
+          }
+        })
+      );
+
+      // Update repositories with workflow check results
+      workflowChecks.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const repoIndex = repositories.findIndex(r => r.id === result.value.id);
+          if (repoIndex !== -1) {
+            repositories[repoIndex].hasWorkflows = result.value.hasWorkflows;
+          }
+        } else {
+          // If the promise was rejected, default to false
+          repositories[index].hasWorkflows = false;
+        }
+      });
+    }
+
+    return repositories;
   } catch (error) {
     logger.logError(error, { context: 'Get GitHub repositories' });
     throw new Error(`Failed to fetch repositories: ${error.message}`);

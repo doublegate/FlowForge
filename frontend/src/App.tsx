@@ -23,6 +23,7 @@ const Login = lazy(() => import('./components/Login'));
 const Register = lazy(() => import('./components/Register'));
 const WorkflowManager = lazy(() => import('./components/WorkflowManager'));
 const WorkflowSuggestions = lazy(() => import('./components/WorkflowSuggestions'));
+const OAuthCallback = lazy(() => import('./components/OAuthCallback'));
 
 /**
  * FlowForge - GitHub Actions Workflow Builder
@@ -198,6 +199,14 @@ const App = () => {
                 {/* Auth routes */}
                 <Route path="/login" element={<AuthPages />} />
                 <Route path="/register" element={<AuthPages />} />
+                <Route
+                  path="/auth/callback"
+                  element={
+                    <Suspense fallback={<LoadingSpinner message="Authenticating..." fullScreen />}>
+                      <OAuthCallback />
+                    </Suspense>
+                  }
+                />
 
                 {/* Protected routes */}
                 <Route

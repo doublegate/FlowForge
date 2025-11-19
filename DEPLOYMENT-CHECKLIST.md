@@ -283,7 +283,7 @@ Use this checklist to ensure a smooth and secure production deployment.
 
 **Date Deployed**: _______________
 **Deployed By**: _______________
-**Version**: v0.5.0
+**Version**: v0.7.0
 **Approved By**: _______________
 
 ---

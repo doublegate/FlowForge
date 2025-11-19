@@ -1,6 +1,6 @@
 {
   "name": "flowforge-backend",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "description": "Backend API for FlowForge - GitHub Actions Workflow Builder",
   "main": "index.js",
   "scripts": {

@@ -44,6 +44,7 @@ const authRoutes = require('./routes/auth');
 const workflowRoutes = require('./routes/workflows');
 const analyticsRoutes = require('./routes/analytics');
 const githubRoutes = require('./routes/github');
+const commentsRoutes = require('./routes/comments');
 
 // Import services
 const scheduler = require('./services/scheduler');
@@ -746,6 +747,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/comments', commentsRoutes);
 
 /**
  * GET /api/actions

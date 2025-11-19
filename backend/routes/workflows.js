@@ -54,6 +54,142 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/workflows/search
+ * Advanced search for workflows with full-text search and filters
+ */
+router.get('/search', authenticateToken, async (req, res) => {
+  try {
+    const {
+      q, // Search query
+      category,
+      tags,
+      visibility,
+      owner,
+      dateFrom,
+      dateTo,
+      sortBy = 'relevance',
+      limit = 20,
+      offset = 0
+    } = req.query;
+
+    // Build search query
+    const searchQuery = {};
+
+    // Full-text search
+    if (q && q.trim()) {
+      const searchTerm = q.trim();
+      searchQuery.$or = [
+        { name: { $regex: searchTerm, $options: 'i' } },
+        { description: { $regex: searchTerm, $options: 'i' } },
+        { tags: { $in: [new RegExp(searchTerm, 'i')] } }
+      ];
+    }
+
+    // Category filter
+    if (category) {
+      searchQuery.category = category;
+    }
+
+    // Tags filter
+    if (tags) {
+      const tagList = tags.split(',').map(t => t.trim());
+      searchQuery.tags = { $in: tagList };
+    }
+
+    // Visibility filter
+    if (visibility) {
+      searchQuery.visibility = visibility;
+    }
+
+    // Owner filter
+    if (owner) {
+      searchQuery.ownerId = owner;
+    }
+
+    // Date range filter
+    if (dateFrom || dateTo) {
+      searchQuery.createdAt = {};
+      if (dateFrom) {
+        searchQuery.createdAt.$gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        searchQuery.createdAt.$lte = new Date(dateTo);
+      }
+    }
+
+    // Access control - only show workflows user has access to
+    searchQuery.$or = searchQuery.$or || [];
+    searchQuery.$or.push(
+      { ownerId: req.user.id },
+      { 'collaborators.userId': req.user.id },
+      { visibility: 'public' }
+    );
+
+    // Determine sort order
+    let sortOptions = {};
+    switch (sortBy) {
+      case 'newest':
+        sortOptions = { createdAt: -1 };
+        break;
+      case 'oldest':
+        sortOptions = { createdAt: 1 };
+        break;
+      case 'name':
+        sortOptions = { name: 1 };
+        break;
+      case 'stars':
+        sortOptions = { 'stats.stars': -1 };
+        break;
+      case 'views':
+        sortOptions = { 'stats.views': -1 };
+        break;
+      case 'updated':
+        sortOptions = { updatedAt: -1 };
+        break;
+      default: // relevance
+        sortOptions = { _id: -1 }; // Default to newest if no text score
+    }
+
+    // Execute search
+    const workflows = await Workflow.find(searchQuery)
+      .sort(sortOptions)
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .select('-yaml')
+      .lean();
+
+    const total = await Workflow.countDocuments(searchQuery);
+
+    logger.info('Advanced search executed', {
+      userId: req.user.id,
+      query: q,
+      results: workflows.length,
+      total
+    });
+
+    res.json({
+      workflows,
+      total,
+      offset: parseInt(offset),
+      limit: parseInt(limit),
+      query: {
+        q,
+        category,
+        tags,
+        visibility,
+        owner,
+        dateFrom,
+        dateTo,
+        sortBy
+      }
+    });
+  } catch (error) {
+    logger.logError(error, { endpoint: '/api/workflows/search', userId: req.user?.id });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/workflows/marketplace
  * Get public marketplace workflows
  */

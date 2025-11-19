@@ -58,7 +58,7 @@ class WebSocketService {
 
         // Verify JWT token
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-        socket.userId = decoded.id;
+        socket.userId = decoded.userId;
         socket.username = decoded.username;
         socket.displayName = decoded.displayName || decoded.username;
 

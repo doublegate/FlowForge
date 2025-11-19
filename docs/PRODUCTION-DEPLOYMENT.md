@@ -1,7 +1,7 @@
 # FlowForge Production Deployment Guide
 
-**Version**: v0.5.0
-**Last Updated**: 2024-11-18
+**Version**: v0.7.0
+**Last Updated**: 2025-11-19
 **Difficulty**: Intermediate
 
 ---

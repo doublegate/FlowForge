@@ -1,23 +1,29 @@
 # FlowForge Deployment Guide
 
-**Last Updated**: 2025-06-24
+**Last Updated**: 2025-11-19
+**Version**: 0.7.0
 
 ## Current Status
 
-FlowForge v0.2.1 is ready for deployment with complete desktop distribution support, full AI integration, and workflow persistence capabilities.
+FlowForge v0.7.0 is production-ready with complete collaboration platform features including real-time editing, GitHub integration, OAuth authentication (5 providers), email notifications, and advanced search capabilities.
 
 ## Prerequisites
 
-- Docker and Docker Compose
+**Required:**
+- Docker and Docker Compose (recommended)
 - Node.js 18+ (for local development)
 - MongoDB 4.4+ (if not using Docker)
 - GitHub Personal Access Token (with repo scope)
 - OpenAI API Key (for AI features)
 - actionlint (for YAML validation)
 
+**Optional (but recommended for full features):**
+- OAuth credentials for one or more providers (GitHub, Google, Microsoft, GitLab, Bitbucket)
+- SMTP server access (Gmail, Outlook, or custom SMTP) for email notifications
+
 ## Environment Configuration
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (copy from `.env.example`):
 
 ```bash
 # Backend Configuration
@@ -25,17 +31,134 @@ NODE_ENV=production
 PORT=3002
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/flowforge
+MONGODB_URI=mongodb://admin:flowforge123@localhost:27017/flowforge?authSource=admin
 
 # External APIs
 GITHUB_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxx
 OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxx
 
-# Frontend URL (for CORS)
+# Frontend URL (for CORS and WebSocket)
 FRONTEND_URL=https://flowforge.example.com
 
-# Session Secret (generate a random string)
-SESSION_SECRET=your-random-session-secret-here
+# JWT Authentication
+JWT_SECRET=your-very-secure-random-jwt-secret-here-min-32-chars
+JWT_EXPIRES_IN=7d
+REFRESH_TOKEN_EXPIRES_IN=30d
+
+# OAuth Providers (Optional - Configure at least one)
+# GitHub OAuth (Primary)
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+GITHUB_CALLBACK_URL=https://flowforge.example.com/api/auth/github/callback
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_CALLBACK_URL=https://flowforge.example.com/api/auth/google/callback
+
+# Microsoft OAuth
+MICROSOFT_CLIENT_ID=your_microsoft_client_id
+MICROSOFT_CLIENT_SECRET=your_microsoft_client_secret
+MICROSOFT_CALLBACK_URL=https://flowforge.example.com/api/auth/microsoft/callback
+
+# GitLab OAuth
+GITLAB_CLIENT_ID=your_gitlab_client_id
+GITLAB_CLIENT_SECRET=your_gitlab_client_secret
+GITLAB_CALLBACK_URL=https://flowforge.example.com/api/auth/gitlab/callback
+GITLAB_BASE_URL=https://gitlab.com  # Or your self-hosted GitLab URL
+
+# Bitbucket OAuth
+BITBUCKET_CLIENT_ID=your_bitbucket_client_id
+BITBUCKET_CLIENT_SECRET=your_bitbucket_client_secret
+BITBUCKET_CALLBACK_URL=https://flowforge.example.com/api/auth/bitbucket/callback
+
+# Email Notifications (Optional - SMTP Configuration)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false  # true for 465, false for other ports
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password  # Use app-specific password for Gmail
+SMTP_FROM_NAME=FlowForge
+SMTP_FROM_EMAIL=noreply@flowforge.dev
+
+# WebSocket Configuration
+WEBSOCKET_PING_TIMEOUT=60000
+WEBSOCKET_PING_INTERVAL=25000
+```
+
+### OAuth Provider Setup
+
+#### GitHub OAuth Application
+
+1. Go to GitHub Settings > Developer settings > OAuth Apps
+2. Create a new OAuth App
+3. Set Authorization callback URL to: `https://yourdomain.com/api/auth/github/callback`
+4. Copy Client ID and Client Secret to `.env`
+
+#### Google OAuth Application
+
+1. Go to Google Cloud Console > APIs & Services > Credentials
+2. Create OAuth 2.0 Client ID (Web application)
+3. Add authorized redirect URI: `https://yourdomain.com/api/auth/google/callback`
+4. Copy Client ID and Client Secret to `.env`
+
+#### Microsoft OAuth Application
+
+1. Go to Azure Portal > App registrations
+2. Register a new application
+3. Add redirect URI: `https://yourdomain.com/api/auth/microsoft/callback`
+4. Create client secret in "Certificates & secrets"
+5. Copy Application (client) ID and client secret to `.env`
+
+#### GitLab OAuth Application
+
+1. Go to GitLab Settings > Applications
+2. Create a new application
+3. Set redirect URI: `https://yourdomain.com/api/auth/gitlab/callback`
+4. Select scopes: `read_user`
+5. Copy Application ID and Secret to `.env`
+
+#### Bitbucket OAuth Application
+
+1. Go to Bitbucket Settings > OAuth consumers
+2. Add a consumer
+3. Set callback URL: `https://yourdomain.com/api/auth/bitbucket/callback`
+4. Select permissions: Account (Read), Email (Read)
+5. Copy Key and Secret to `.env`
+
+### SMTP Email Configuration
+
+#### Gmail Setup
+
+1. Enable 2-factor authentication on your Google account
+2. Generate an app-specific password: https://myaccount.google.com/apppasswords
+3. Use these settings:
+   ```bash
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_SECURE=false
+   SMTP_USER=your_email@gmail.com
+   SMTP_PASS=your_16_char_app_password
+   ```
+
+#### Outlook/Microsoft 365 Setup
+
+```bash
+SMTP_HOST=smtp-mail.outlook.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your_email@outlook.com
+SMTP_PASS=your_password
+```
+
+#### Custom SMTP Server
+
+```bash
+SMTP_HOST=your_smtp_server.com
+SMTP_PORT=587  # or 465 for SSL
+SMTP_SECURE=false  # true for SSL
+SMTP_USER=your_smtp_username
+SMTP_PASS=your_smtp_password
 ```
 
 ## Desktop Distribution

@@ -160,15 +160,16 @@ class WorkflowScheduler {
   async updateNextRunTime(workflow) {
     try {
       const cronExpression = workflow.schedule.cron;
-      const timezone = workflow.schedule.timezone || 'UTC';
+      // const timezone = workflow.schedule.timezone || 'UTC'; // Reserved for future use with cron-parser
 
       // Parse cron expression to calculate next run time
-      // This is a simplified version - you might want to use a library like 'cron-parser'
-      // for more accurate calculations
+      // NOTE: This is a simplified implementation. For production use, consider using
+      // the 'cron-parser' library for accurate scheduling with proper timezone support.
+      // Current implementation uses basic approximation which may not handle all edge cases.
 
       // For now, we'll use a simple approximation
       const now = new Date();
-      const parts = cronExpression.split(' ');
+      // const parts = cronExpression.split(' '); // Reserved for future cron parsing
 
       // Basic cron format: minute hour day month weekday
       // Calculate approximate next run (simplified)
@@ -221,7 +222,7 @@ class WorkflowScheduler {
   shutdown() {
     logger.info('Shutting down workflow scheduler...');
 
-    for (const [workflowId, task] of this.scheduledJobs.entries()) {
+    for (const [, task] of this.scheduledJobs.entries()) {
       task.stop();
     }
 

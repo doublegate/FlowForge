@@ -48,6 +48,7 @@ const commentsRoutes = require('./routes/comments');
 
 // Import services
 const scheduler = require('./services/scheduler');
+const websocketService = require('./services/websocketService');
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -1412,6 +1413,10 @@ async function startServer() {
       }
       logger.info(`FlowForge API server running on port ${PORT}`);
       logger.info(`Server PID: ${process.pid}`);
+
+      // Initialize WebSocket service for real-time collaboration
+      websocketService.initialize(server);
+      logger.info('WebSocket service initialized for real-time collaboration');
     });
 
     // Schedule periodic updates (every 6 hours)
@@ -1442,6 +1447,13 @@ const gracefulShutdown = async (signal) => {
   // Stop workflow scheduler
   logger.info('Stopping workflow scheduler...');
   scheduler.shutdown();
+
+  // Disconnect all WebSocket clients
+  if (websocketService.io) {
+    logger.info('Closing WebSocket connections...');
+    websocketService.io.close();
+    logger.info('WebSocket connections closed');
+  }
 
   // Stop accepting new connections
   if (server) {

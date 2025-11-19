@@ -440,4 +440,106 @@ router.get(
   }
 );
 
+/**
+ * GET /api/auth/microsoft
+ * Initiate Microsoft OAuth flow
+ */
+router.get('/microsoft', passport.authenticate('microsoft', { scope: ['user.read'] }));
+
+/**
+ * GET /api/auth/microsoft/callback
+ * Microsoft OAuth callback
+ */
+router.get(
+  '/microsoft/callback',
+  passport.authenticate('microsoft', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      // Generate JWT tokens
+      const tokens = generateTokens(req.user);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+
+      logger.logAuth('Microsoft OAuth login successful', req.user._id, {
+        email: req.user.email
+      });
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.logError(error, { context: 'Microsoft OAuth callback' });
+      res.redirect('/login?error=oauth_failed');
+    }
+  }
+);
+
+/**
+ * GET /api/auth/gitlab
+ * Initiate GitLab OAuth flow
+ */
+router.get('/gitlab', passport.authenticate('gitlab', { scope: ['read_user'] }));
+
+/**
+ * GET /api/auth/gitlab/callback
+ * GitLab OAuth callback
+ */
+router.get(
+  '/gitlab/callback',
+  passport.authenticate('gitlab', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      // Generate JWT tokens
+      const tokens = generateTokens(req.user);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+
+      logger.logAuth('GitLab OAuth login successful', req.user._id, {
+        email: req.user.email
+      });
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.logError(error, { context: 'GitLab OAuth callback' });
+      res.redirect('/login?error=oauth_failed');
+    }
+  }
+);
+
+/**
+ * GET /api/auth/bitbucket
+ * Initiate Bitbucket OAuth flow
+ */
+router.get('/bitbucket', passport.authenticate('bitbucket', { scope: ['account', 'email'] }));
+
+/**
+ * GET /api/auth/bitbucket/callback
+ * Bitbucket OAuth callback
+ */
+router.get(
+  '/bitbucket/callback',
+  passport.authenticate('bitbucket', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      // Generate JWT tokens
+      const tokens = generateTokens(req.user);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+
+      logger.logAuth('Bitbucket OAuth login successful', req.user._id, {
+        email: req.user.email
+      });
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.logError(error, { context: 'Bitbucket OAuth callback' });
+      res.redirect('/login?error=oauth_failed');
+    }
+  }
+);
+
 module.exports = router;

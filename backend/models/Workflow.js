@@ -196,7 +196,21 @@ const WorkflowSchema = new mongoose.Schema({
   lastEditedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }
+  },
+
+  // GitHub integration
+  githubDeployments: [{
+    repository: String, // owner/repo format
+    branch: String,
+    path: String,
+    commitSha: String,
+    pullRequest: Number,
+    deployedAt: Date,
+    deployedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }]
 }, {
   timestamps: true
 });

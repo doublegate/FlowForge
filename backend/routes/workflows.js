@@ -17,6 +17,13 @@ const Workflow = require('../models/Workflow');
 const WorkflowVersion = require('../models/WorkflowVersion');
 const { authenticateToken } = require('../middleware/auth');
 const logger = require('../utils/logger');
+const {
+  exportToJSON,
+  exportToYAML,
+  validateImport,
+  parseYAML,
+  sanitizeImport
+} = require('../utils/workflowImportExport');
 
 /**
  * GET /api/workflows
@@ -630,6 +637,201 @@ router.post('/:id/unpublish', authenticateToken, async (req, res) => {
     res.json(workflow);
   } catch (error) {
     logger.logError(error, { endpoint: `/api/workflows/${req.params.id}/unpublish`, userId: req.user?.id });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/workflows/:id/export
+ * Export workflow to JSON or YAML format
+ */
+router.get('/:id/export', authenticateToken, async (req, res) => {
+  try {
+    const { format = 'json', includeMetadata, includeStats, includeCollaborators } = req.query;
+
+    const workflow = await Workflow.findById(req.params.id);
+
+    if (!workflow) {
+      return res.status(404).json({ error: 'Workflow not found' });
+    }
+
+    // Check access permission (viewer or higher)
+    if (!workflow.hasAccess(req.user.id, 'viewer')) {
+      return res.status(403).json({ error: 'You do not have permission to export this workflow' });
+    }
+
+    let exportedData;
+    let contentType;
+    let filename;
+
+    if (format === 'yaml' || format === 'yml') {
+      exportedData = exportToYAML(workflow, {
+        includeComments: includeMetadata !== 'false'
+      });
+      contentType = 'text/yaml';
+      filename = `${workflow.name.replace(/\s+/g, '-').toLowerCase()}.yml`;
+    } else {
+      exportedData = exportToJSON(workflow, {
+        includeMetadata: includeMetadata !== 'false',
+        includeStats: includeStats === 'true',
+        includeCollaborators: includeCollaborators === 'true'
+      });
+      contentType = 'application/json';
+      filename = `${workflow.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    }
+
+    logger.info('Workflow exported', {
+      workflowId: workflow._id,
+      userId: req.user.id,
+      format
+    });
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    if (format === 'json') {
+      res.json(exportedData);
+    } else {
+      res.send(exportedData);
+    }
+  } catch (error) {
+    logger.logError(error, { endpoint: `/api/workflows/${req.params.id}/export`, userId: req.user?.id });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/workflows/import
+ * Import workflow from JSON or YAML
+ */
+router.post('/import', authenticateToken, async (req, res) => {
+  try {
+    const { data, format = 'json', source } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'No workflow data provided' });
+    }
+
+    let workflowData;
+
+    // Parse based on format
+    if (format === 'yaml' || format === 'yml') {
+      const parseResult = parseYAML(data);
+
+      if (!parseResult.success) {
+        return res.status(400).json({ error: parseResult.error });
+      }
+
+      workflowData = { workflow: parseResult.workflow };
+    } else {
+      try {
+        workflowData = typeof data === 'string' ? JSON.parse(data) : data;
+      } catch (parseError) {
+        return res.status(400).json({ error: 'Invalid JSON format' });
+      }
+    }
+
+    // Validate workflow data
+    const validation = validateImport(workflowData);
+
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: 'Workflow validation failed',
+        errors: validation.errors
+      });
+    }
+
+    // Sanitize and prepare for import
+    const sanitized = sanitizeImport(workflowData.workflow, req.user.id);
+
+    // Add source information if provided
+    if (source) {
+      sanitized.importSource = source;
+    }
+
+    // Create workflow
+    const workflow = await Workflow.create(sanitized);
+
+    // Create initial version
+    await WorkflowVersion.createVersion(
+      workflow,
+      req.user.id,
+      'created',
+      `Imported from ${format.toUpperCase()}`
+    );
+
+    logger.info('Workflow imported', {
+      workflowId: workflow._id,
+      userId: req.user.id,
+      format,
+      source
+    });
+
+    res.status(201).json({
+      success: true,
+      workflow,
+      message: 'Workflow imported successfully'
+    });
+  } catch (error) {
+    logger.logError(error, { endpoint: '/api/workflows/import', userId: req.user?.id });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/workflows/validate-import
+ * Validate workflow data before import (preview)
+ */
+router.post('/validate-import', authenticateToken, async (req, res) => {
+  try {
+    const { data, format = 'json' } = req.body;
+
+    if (!data) {
+      return res.status(400).json({ error: 'No workflow data provided' });
+    }
+
+    let workflowData;
+
+    // Parse based on format
+    if (format === 'yaml' || format === 'yml') {
+      const parseResult = parseYAML(data);
+
+      if (!parseResult.success) {
+        return res.status(400).json({
+          valid: false,
+          error: parseResult.error
+        });
+      }
+
+      workflowData = { workflow: parseResult.workflow };
+    } else {
+      try {
+        workflowData = typeof data === 'string' ? JSON.parse(data) : data;
+      } catch (parseError) {
+        return res.status(400).json({
+          valid: false,
+          error: 'Invalid JSON format'
+        });
+      }
+    }
+
+    // Validate workflow data
+    const validation = validateImport(workflowData);
+
+    res.json({
+      valid: validation.valid,
+      errors: validation.errors,
+      preview: validation.valid ? {
+        name: workflowData.workflow.name,
+        description: workflowData.workflow.description,
+        nodeCount: workflowData.workflow.nodes?.length || 0,
+        edgeCount: workflowData.workflow.edges?.length || 0,
+        category: workflowData.metadata?.category,
+        tags: workflowData.metadata?.tags
+      } : null
+    });
+  } catch (error) {
+    logger.logError(error, { endpoint: '/api/workflows/validate-import', userId: req.user?.id });
     res.status(500).json({ error: error.message });
   }
 });

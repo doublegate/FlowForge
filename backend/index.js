@@ -43,6 +43,7 @@ const errorLogger = require('./middleware/errorLogger');
 const authRoutes = require('./routes/auth');
 const workflowRoutes = require('./routes/workflows');
 const analyticsRoutes = require('./routes/analytics');
+const githubRoutes = require('./routes/github');
 
 // Import services
 const scheduler = require('./services/scheduler');
@@ -744,6 +745,7 @@ async function validateWorkflow(yamlContent) {
 app.use('/api/auth', authRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/github', githubRoutes);
 
 /**
  * GET /api/actions

@@ -41,6 +41,11 @@ const errorLogger = require('./middleware/errorLogger');
 
 // Import route modules
 const authRoutes = require('./routes/auth');
+const workflowRoutes = require('./routes/workflows');
+const analyticsRoutes = require('./routes/analytics');
+
+// Import services
+const scheduler = require('./services/scheduler');
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -734,10 +739,11 @@ async function validateWorkflow(yamlContent) {
 // API Routes
 
 /**
- * Authentication Routes
- * Handle user registration, login, and token management
+ * API Routes
  */
 app.use('/api/auth', authRoutes);
+app.use('/api/workflows', workflowRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 /**
  * GET /api/actions
@@ -1415,6 +1421,10 @@ async function startServer() {
       logger.info('Database is empty, performing initial update...');
       updateActionDatabase().catch(err => logger.logError(err, { operation: 'initialUpdate' }));
     }
+
+    // Initialize workflow scheduler
+    logger.info('Initializing workflow scheduler...');
+    await scheduler.initialize();
   } catch (error) {
     logger.error('Failed to start server', error);
     process.exit(1);
@@ -1424,6 +1434,10 @@ async function startServer() {
 // Handle graceful shutdown
 const gracefulShutdown = async (signal) => {
   logger.info(`${signal} received, starting graceful shutdown...`);
+
+  // Stop workflow scheduler
+  logger.info('Stopping workflow scheduler...');
+  scheduler.shutdown();
 
   // Stop accepting new connections
   if (server) {

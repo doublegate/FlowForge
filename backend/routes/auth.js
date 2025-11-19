@@ -10,9 +10,14 @@
 
 const express = require('express');
 const router = express.Router();
+const passport = require('passport');
 const User = require('../models/User');
 const { generateTokens, refreshAccessToken } = require('../utils/jwtUtils');
 const { authenticate } = require('../middleware/auth');
+const logger = require('../utils/logger');
+
+// Load Passport configuration
+require('../config/passport');
 
 /**
  * POST /api/auth/register
@@ -362,5 +367,77 @@ router.put('/password', authenticate, async (req, res) => {
     });
   }
 });
+
+/**
+ * OAuth Routes
+ */
+
+/**
+ * GET /api/auth/github
+ * Initiate GitHub OAuth flow
+ */
+router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
+
+/**
+ * GET /api/auth/github/callback
+ * GitHub OAuth callback
+ */
+router.get(
+  '/github/callback',
+  passport.authenticate('github', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      // Generate JWT tokens
+      const tokens = generateTokens(req.user);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+
+      logger.logAuth('GitHub OAuth login successful', req.user._id, {
+        email: req.user.email
+      });
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.logError(error, { context: 'GitHub OAuth callback' });
+      res.redirect('/login?error=oauth_failed');
+    }
+  }
+);
+
+/**
+ * GET /api/auth/google
+ * Initiate Google OAuth flow
+ */
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+/**
+ * GET /api/auth/google/callback
+ * Google OAuth callback
+ */
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  async (req, res) => {
+    try {
+      // Generate JWT tokens
+      const tokens = generateTokens(req.user);
+
+      // Redirect to frontend with tokens
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`;
+
+      logger.logAuth('Google OAuth login successful', req.user._id, {
+        email: req.user.email
+      });
+
+      res.redirect(redirectUrl);
+    } catch (error) {
+      logger.logError(error, { context: 'Google OAuth callback' });
+      res.redirect('/login?error=oauth_failed');
+    }
+  }
+);
 
 module.exports = router;

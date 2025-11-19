@@ -6,7 +6,9 @@
 
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const User = require('../models/User');
+const logger = require('../utils/logger');
 
 /**
  * Serialize user for session
@@ -67,7 +69,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
               user.oauthProvider = 'github';
               await user.save();
 
-              console.log(`[OAuth] Linked GitHub account to existing user: ${email}`);
+              logger.info('[OAuth] Linked GitHub account to existing user', { email });
             } else {
               // Create new user
               user = await User.create({
@@ -80,7 +82,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
                 oauthProvider: 'github',
               });
 
-              console.log(`[OAuth] Created new user from GitHub: ${email}`);
+              logger.info('[OAuth] Created new user from GitHub', { email });
             }
           } else {
             // Update existing GitHub user
@@ -89,31 +91,28 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
             user.lastLogin = new Date();
             await user.save();
 
-            console.log(`[OAuth] Updated GitHub user: ${email}`);
+            logger.info('[OAuth] Updated GitHub user', { email });
           }
 
           return done(null, user);
         } catch (err) {
-          console.error('[OAuth] GitHub authentication error:', err);
+          logger.logError(err, { context: 'GitHub OAuth' });
           return done(err, null);
         }
       }
     )
   );
 
-  console.log('[Passport] GitHub OAuth strategy configured');
+  logger.info('[Passport] GitHub OAuth strategy configured');
 } else {
-  console.warn('[Passport] GitHub OAuth not configured - missing credentials');
+  logger.warn('[Passport] GitHub OAuth not configured - missing credentials');
 }
 
 /**
- * Google OAuth 2.0 Strategy (Optional)
+ * Google OAuth 2.0 Strategy
  *
- * Uncomment and configure when Google OAuth credentials are available
+ * Allows users to sign in with their Google account
  */
-/*
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
     new GoogleStrategy(
@@ -121,6 +120,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3002/api/auth/google/callback',
+        scope: ['profile', 'email'],
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -130,46 +130,58 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             return done(new Error('No email found in Google profile'), null);
           }
 
+          // Check if user exists with Google ID
           let user = await User.findOne({ googleId: profile.id });
 
           if (!user) {
+            // Check if user exists with this email
             user = await User.findOne({ email });
 
             if (user) {
+              // Link Google account to existing user
               user.googleId = profile.id;
               user.googleAccessToken = accessToken;
               user.avatar = profile.photos?.[0]?.value || user.avatar;
               user.oauthProvider = 'google';
               await user.save();
+
+              logger.info('[OAuth] Linked Google account to existing user', { email });
             } else {
+              // Create new user
               user = await User.create({
                 email,
                 username: profile.displayName || email.split('@')[0],
                 googleId: profile.id,
                 googleAccessToken: accessToken,
                 avatar: profile.photos?.[0]?.value,
-                emailVerified: true,
+                emailVerified: true, // Google emails are verified
                 oauthProvider: 'google',
               });
+
+              logger.info('[OAuth] Created new user from Google', { email });
             }
           } else {
+            // Update existing Google user
             user.googleAccessToken = accessToken;
             user.avatar = profile.photos?.[0]?.value || user.avatar;
             user.lastLogin = new Date();
             await user.save();
+
+            logger.info('[OAuth] Updated Google user', { email });
           }
 
           return done(null, user);
         } catch (err) {
-          console.error('[OAuth] Google authentication error:', err);
+          logger.logError(err, { context: 'Google OAuth' });
           return done(err, null);
         }
       }
     )
   );
 
-  console.log('[Passport] Google OAuth strategy configured');
+  logger.info('[Passport] Google OAuth strategy configured');
+} else {
+  logger.warn('[Passport] Google OAuth not configured - missing credentials');
 }
-*/
 
 module.exports = passport;

@@ -50,7 +50,9 @@
     "lru-cache": "^10.2.0",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
+    "node-cron": "^4.2.1",
     "openai": "^4.24.1",
+    "passport-google-oauth20": "^2.0.0",
     "uuid": "^11.1.0",
     "winston": "^3.18.3",
     "winston-daily-rotate-file": "^5.0.0"

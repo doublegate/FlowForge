@@ -161,6 +161,12 @@ class WorkflowScheduler {
     try {
       const cronExpression = workflow.schedule.cron;
       // const timezone = workflow.schedule.timezone || 'UTC'; // Reserved for future use with cron-parser
+      // NOTE: Timezone support is NOT implemented. All scheduling is done in UTC.
+      if (workflow.schedule.timezone && workflow.schedule.timezone !== 'UTC') {
+        logger.warn(
+          `Timezone '${workflow.schedule.timezone}' specified for workflow '${workflow.name}' (ID: ${workflow._id}) is ignored. Only UTC is currently supported.`
+        );
+      }
 
       // Parse cron expression to calculate next run time
       // NOTE: This is a simplified implementation. For production use, consider using

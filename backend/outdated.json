@@ -1,0 +1,107 @@
+{
+  "@octokit/rest": {
+    "wanted": "20.1.2",
+    "latest": "21.1.1",
+    "dependent": "backend"
+  },
+  "@types/bcrypt": {
+    "wanted": "6.0.0",
+    "latest": "6.0.0",
+    "dependent": "backend"
+  },
+  "@types/jsonwebtoken": {
+    "wanted": "9.0.10",
+    "latest": "9.0.10",
+    "dependent": "backend"
+  },
+  "actionlint": {
+    "wanted": "2.0.6",
+    "latest": "2.0.6",
+    "dependent": "backend"
+  },
+  "bcrypt": {
+    "wanted": "6.0.0",
+    "latest": "6.0.0",
+    "dependent": "backend"
+  },
+  "cors": {
+    "wanted": "2.8.5",
+    "latest": "2.8.5",
+    "dependent": "backend"
+  },
+  "dotenv": {
+    "wanted": "16.6.1",
+    "latest": "17.2.3",
+    "dependent": "backend"
+  },
+  "express": {
+    "wanted": "4.22.1",
+    "latest": "5.2.1",
+    "dependent": "backend"
+  },
+  "express-rate-limit": {
+    "wanted": "7.5.1",
+    "latest": "8.2.1",
+    "dependent": "backend"
+  },
+  "helmet": {
+    "wanted": "7.2.0",
+    "latest": "8.1.0",
+    "dependent": "backend"
+  },
+  "js-yaml": {
+    "wanted": "4.1.1",
+    "latest": "4.1.1",
+    "dependent": "backend"
+  },
+  "jsonwebtoken": {
+    "wanted": "9.0.3",
+    "latest": "9.0.3",
+    "dependent": "backend"
+  },
+  "lru-cache": {
+    "wanted": "10.4.3",
+    "latest": "10.4.3",
+    "dependent": "backend"
+  },
+  "mongoose": {
+    "wanted": "8.21.0",
+    "latest": "8.21.0",
+    "dependent": "backend"
+  },
+  "morgan": {
+    "wanted": "1.10.1",
+    "latest": "1.10.1",
+    "dependent": "backend"
+  },
+  "node-cron": {
+    "wanted": "4.2.1",
+    "latest": "4.2.1",
+    "dependent": "backend"
+  },
+  "openai": {
+    "wanted": "4.104.0",
+    "latest": "6.15.0",
+    "dependent": "backend"
+  },
+  "passport-google-oauth20": {
+    "wanted": "2.0.0",
+    "latest": "2.0.0",
+    "dependent": "backend"
+  },
+  "uuid": {
+    "wanted": "11.1.0",
+    "latest": "13.0.0",
+    "dependent": "backend"
+  },
+  "winston": {
+    "wanted": "3.19.0",
+    "latest": "3.19.0",
+    "dependent": "backend"
+  },
+  "winston-daily-rotate-file": {
+    "wanted": "5.0.0",
+    "latest": "5.0.0",
+    "dependent": "backend"
+  }
+}

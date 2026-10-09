@@ -238,6 +238,7 @@ function requireEmailVerified(req, res, next) {
 
 module.exports = {
   authenticate,
+  authenticateToken: authenticate,
   optionalAuth,
   requireAdmin,
   requireRole,

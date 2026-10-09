@@ -148,7 +148,7 @@ const ActionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const Action = mongoose.model('Action', ActionSchema);
+const Action = mongoose.models.Action || mongoose.model('Action', ActionSchema);
 
 /**
  * Workflow Template Schema
@@ -165,7 +165,7 @@ const WorkflowTemplateSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const WorkflowTemplate = mongoose.model('WorkflowTemplate', WorkflowTemplateSchema);
+const WorkflowTemplate = mongoose.models.WorkflowTemplate || mongoose.model('WorkflowTemplate', WorkflowTemplateSchema);
 
 /**
  * Workflow Schema
@@ -202,7 +202,7 @@ const WorkflowSchema = new mongoose.Schema({
 WorkflowSchema.index({ userId: 1, createdAt: -1 });
 WorkflowSchema.index({ isPublic: 1, createdAt: -1 });
 
-const Workflow = mongoose.model('Workflow', WorkflowSchema);
+const Workflow = mongoose.models.Workflow || mongoose.model('Workflow', WorkflowSchema);
 
 /**
  * Parse the Awesome Actions README to extract action repositories

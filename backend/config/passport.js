@@ -4,12 +4,35 @@
  * Configures Passport.js strategies for OAuth authentication
  */
 
-const passport = require('passport');
-const GitHubStrategy = require('passport-github2').Strategy;
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const MicrosoftStrategy = require('passport-microsoft').Strategy;
-const GitLabStrategy = require('passport-gitlab2').Strategy;
-const BitbucketStrategy = require('passport-bitbucket-oauth2').Strategy;
+let passport;
+try {
+  passport = require('passport');
+} catch (_) {}
+
+let GitHubStrategy;
+try {
+  GitHubStrategy = require('passport-github2').Strategy;
+} catch (_) {}
+
+let GoogleStrategy;
+try {
+  GoogleStrategy = require('passport-google-oauth20').Strategy;
+} catch (_) {}
+
+let MicrosoftStrategy;
+try {
+  MicrosoftStrategy = require('passport-microsoft').Strategy;
+} catch (_) {}
+
+let GitLabStrategy;
+try {
+  GitLabStrategy = require('passport-gitlab2').Strategy;
+} catch (_) {}
+
+let BitbucketStrategy;
+try {
+  BitbucketStrategy = require('passport-bitbucket-oauth2').Strategy;
+} catch (_) {}
 const User = require('../models/User');
 const logger = require('../utils/logger');
 

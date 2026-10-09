@@ -5,7 +5,10 @@
  * Falls back to in-memory caching if Redis is unavailable.
  */
 
-const Redis = require('ioredis');
+let Redis;
+try {
+  Redis = require('ioredis');
+} catch (_) {}
 const logger = console; // Use your logger here
 
 class RedisService {
@@ -17,10 +20,10 @@ class RedisService {
   }
 
   init() {
-    const redisEnabled = process.env.REDIS_ENABLED !== 'false';
+    const redisEnabled = Boolean(Redis) && process.env.REDIS_ENABLED !== 'false' && process.env.REDIS_HOST;
 
-    if (!redisEnabled) {
-      logger.info('[Redis] Disabled - using in-memory cache fallback');
+    if (!redisEnabled || !Redis) {
+      logger.info('[Redis] Unavailable or disabled - using in-memory cache fallback');
       return;
     }
 

@@ -9,7 +9,10 @@
  * - Activity notifications
  */
 
-const socketIO = require('socket.io');
+let socketIO;
+try {
+  socketIO = require('socket.io');
+} catch (_) {}
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 
@@ -27,6 +30,10 @@ class WebSocketService {
    * Initialize Socket.IO server
    */
   initialize(server) {
+    if (!socketIO) {
+      logger.warn('[WebSocket] socket.io not installed - real-time features disabled');
+      return;
+    }
     this.io = socketIO(server, {
       cors: {
         origin: process.env.FRONTEND_URL || 'http://localhost:5173',

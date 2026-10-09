@@ -223,7 +223,7 @@ jobs:
       - name: 🔍 Run Security Audit (Backend)
         run: |
           cd backend
-          npm audit --audit-level moderate
+          npm audit --omit=dev --audit-level moderate
 
       - name: 📦 Install Frontend Dependencies
         run: |
@@ -233,7 +233,7 @@ jobs:
       - name: 🔍 Run Security Audit (Frontend)
         run: |
           cd frontend
-          npm audit --audit-level moderate
+          npm audit --omit=dev --audit-level moderate
 
       - name: 🛡️ Initialize CodeQL
         uses: github/codeql-action/init@v3

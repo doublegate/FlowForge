@@ -4,8 +4,8 @@
  * Tests for the notification/toast system
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderHook, act, render, screen } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, act, screen } from '@testing-library/react';
 import { NotificationProvider, useNotification } from '../contexts/NotificationContext';
 
 describe('NotificationContext', () => {

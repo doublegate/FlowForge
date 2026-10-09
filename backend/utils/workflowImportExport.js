@@ -87,11 +87,11 @@ function exportToYAML(workflow, options = {}) {
     yamlContent += `# Workflow: ${workflow.name}\n`;
     yamlContent += `# Description: ${workflow.description || 'No description'}\n`;
     yamlContent += `# Exported from FlowForge on ${new Date().toISOString()}\n`;
-    yamlContent += `#\n`;
+    yamlContent += '#\n';
     if (workflow.tags && workflow.tags.length > 0) {
       yamlContent += `# Tags: ${workflow.tags.join(', ')}\n`;
     }
-    yamlContent += `\n`;
+    yamlContent += '\n';
   }
 
   // Use the workflow's YAML if available, otherwise generate from nodes

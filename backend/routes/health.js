@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
 
     // Determine HTTP status code
     const statusCode = health.status === 'healthy' ? 200 :
-                       health.status === 'degraded' ? 200 : 503;
+      health.status === 'degraded' ? 200 : 503;
 
     res.status(statusCode).json(health);
 

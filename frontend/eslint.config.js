@@ -50,7 +50,12 @@ export default [
         Request: 'readonly',
         Response: 'readonly',
         AbortController: 'readonly',
-        AbortSignal: 'readonly'
+        AbortSignal: 'readonly',
+        PerformanceObserver: 'readonly',
+        performance: 'readonly',
+        MediaQueryListEvent: 'readonly',
+        global: 'readonly',
+        globalThis: 'readonly'
       }
     },
     plugins: {

@@ -169,16 +169,16 @@ router.delete('/unlink/:provider', async (req, res) => {
 
     // Unlink provider
     switch (provider) {
-      case 'github':
-        user.githubId = undefined;
-        user.githubAccessToken = undefined;
-        break;
-      case 'google':
-        user.googleId = undefined;
-        user.googleAccessToken = undefined;
-        break;
-      default:
-        return res.status(400).json({ error: 'Invalid provider' });
+    case 'github':
+      user.githubId = undefined;
+      user.githubAccessToken = undefined;
+      break;
+    case 'google':
+      user.googleId = undefined;
+      user.googleAccessToken = undefined;
+      break;
+    default:
+      return res.status(400).json({ error: 'Invalid provider' });
     }
 
     // Update OAuth provider if this was the active one

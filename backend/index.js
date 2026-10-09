@@ -38,6 +38,7 @@ const path = require('path');
 const logger = require('./utils/logger');
 const requestLogger = require('./middleware/requestLogger');
 const errorLogger = require('./middleware/errorLogger');
+const { authenticate, optionalAuth } = require('./middleware/auth');
 
 // Import route modules
 const authRoutes = require('./routes/auth');

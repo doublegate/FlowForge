@@ -166,7 +166,7 @@ jobs:
             type=raw,value=latest
 
       - name: 🏗️ Build and Push Backend Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -183,7 +183,7 @@ jobs:
           path: .
 
       - name: 🏗️ Build and Push Frontend Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -288,7 +288,7 @@ jobs:
           EOF
 
       - name: 🎉 Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.validate-release.outputs.tag }}
           name: FlowForge ${{ needs.validate-release.outputs.version }}

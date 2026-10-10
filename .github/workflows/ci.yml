@@ -25,7 +25,7 @@ permissions:
   security-events: write
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   CACHE_VERSION: 'v1'
 
 concurrency:
@@ -145,7 +145,7 @@ jobs:
       - name: 📊 Upload Backend Coverage
         uses: codecov/codecov-action@v5
         with:
-          file: backend/coverage/lcov.info
+          files: backend/coverage/lcov.info
           flags: backend
           name: backend-coverage
 
@@ -187,7 +187,7 @@ jobs:
       - name: 📊 Upload Frontend Coverage
         uses: codecov/codecov-action@v5
         with:
-          file: frontend/coverage/lcov.info
+          files: frontend/coverage/lcov.info
           flags: frontend
           name: frontend-coverage
 
@@ -520,7 +520,7 @@ jobs:
           echo "| Integration Tests | ${{ needs.integration-test.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: 🧹 Cleanup Artifacts
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: |
             backend-node-modules

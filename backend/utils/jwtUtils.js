@@ -105,7 +105,7 @@ function verifyToken(token) {
 function decodeToken(token) {
   try {
     return jwt.decode(token);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -138,7 +138,7 @@ function isTokenExpired(token) {
 
     const currentTime = Math.floor(Date.now() / 1000);
     return decoded.exp < currentTime;
-  } catch (error) {
+  } catch (_error) {
     return true;
   }
 }
@@ -154,7 +154,7 @@ function getTokenExpiration(token) {
     if (!decoded || !decoded.exp) return null;
 
     return new Date(decoded.exp * 1000);
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }

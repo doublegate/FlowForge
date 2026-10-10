@@ -33,7 +33,8 @@ module.exports = [
     rules: {
       'indent': ['error', 2],
       'quotes': ['error', 'single'],
-      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }]
+      'no-empty': ['error', { 'allowEmptyCatch': true }],
+      'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_', 'caughtErrorsIgnorePattern': '^_' }]
     }
   }
 ];

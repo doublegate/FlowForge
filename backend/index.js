@@ -27,7 +27,6 @@ const { Octokit } = require('@octokit/rest');
 const OpenAI = require('openai');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const morgan = require('morgan');
 const dotenv = require('dotenv');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
@@ -1377,7 +1376,7 @@ app.post('/api/actions/update', async (req, res) => {
 app.use(errorLogger);
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   const statusCode = err.statusCode || 500;
 
   res.status(statusCode).json({

@@ -14,7 +14,9 @@
 let nodemailer;
 try {
   nodemailer = require('nodemailer');
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 const logger = require('../utils/logger');
 
 class EmailService {

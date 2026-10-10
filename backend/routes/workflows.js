@@ -862,7 +862,7 @@ router.post('/import', authenticateToken, async (req, res) => {
     } else {
       try {
         workflowData = typeof data === 'string' ? JSON.parse(data) : data;
-      } catch (parseError) {
+      } catch (_parseError) {
         return res.status(400).json({ error: 'Invalid JSON format' });
       }
     }
@@ -943,7 +943,7 @@ router.post('/validate-import', authenticateToken, async (req, res) => {
     } else {
       try {
         workflowData = typeof data === 'string' ? JSON.parse(data) : data;
-      } catch (parseError) {
+      } catch (_parseError) {
         return res.status(400).json({
           valid: false,
           error: 'Invalid JSON format'

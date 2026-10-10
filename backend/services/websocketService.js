@@ -12,7 +12,9 @@
 let socketIO;
 try {
   socketIO = require('socket.io');
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 

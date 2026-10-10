@@ -7,32 +7,44 @@
 let passport;
 try {
   passport = require('passport');
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 
 let GitHubStrategy;
 try {
   GitHubStrategy = require('passport-github2').Strategy;
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 
 let GoogleStrategy;
 try {
   GoogleStrategy = require('passport-google-oauth20').Strategy;
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 
 let MicrosoftStrategy;
 try {
   MicrosoftStrategy = require('passport-microsoft').Strategy;
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 
 let GitLabStrategy;
 try {
   GitLabStrategy = require('passport-gitlab2').Strategy;
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 
 let BitbucketStrategy;
 try {
   BitbucketStrategy = require('passport-bitbucket-oauth2').Strategy;
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 const User = require('../models/User');
 const logger = require('../utils/logger');
 

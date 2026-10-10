@@ -235,7 +235,7 @@ function parseYAML(yamlContent) {
     // Convert YAML steps to nodes
     if (parsed.jobs) {
       let nodeIndex = 0;
-      Object.entries(parsed.jobs).forEach(([jobId, job]) => {
+      Object.entries(parsed.jobs).forEach(([_jobId, job]) => {
         if (job.steps && Array.isArray(job.steps)) {
           job.steps.forEach((step, stepIndex) => {
             const nodeId = `node-${nodeIndex++}`;

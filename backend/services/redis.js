@@ -8,7 +8,9 @@
 let Redis;
 try {
   Redis = require('ioredis');
-} catch (_) {}
+} catch {
+  // Optional dependency not installed
+}
 const logger = console; // Use your logger here
 
 class RedisService {

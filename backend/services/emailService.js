@@ -11,7 +11,12 @@
  * @version 1.0.0
  */
 
-const nodemailer = require('nodemailer');
+let nodemailer;
+try {
+  nodemailer = require('nodemailer');
+} catch {
+  // Optional dependency not installed
+}
 const logger = require('../utils/logger');
 
 class EmailService {
@@ -40,7 +45,7 @@ class EmailService {
     };
 
     // Check if SMTP is configured
-    if (!smtpConfig.host || !smtpConfig.auth.user) {
+    if (!nodemailer || !smtpConfig.host || !smtpConfig.auth.user) {
       logger.warn('Email service not configured. Email notifications will be disabled.');
       return;
     }

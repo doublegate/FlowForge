@@ -444,17 +444,17 @@ WorkflowSchema.statics = {
 
     let sort = {};
     switch (sortBy) {
-      case 'stars':
-        sort = { 'stats.stars': -1 };
-        break;
-      case 'uses':
-        sort = { 'stats.uses': -1 };
-        break;
-      case 'recent':
-        sort = { publishedAt: -1 };
-        break;
-      default:
-        sort = { 'stats.stars': -1 };
+    case 'stars':
+      sort = { 'stats.stars': -1 };
+      break;
+    case 'uses':
+      sort = { 'stats.uses': -1 };
+      break;
+    case 'recent':
+      sort = { publishedAt: -1 };
+      break;
+    default:
+      sort = { 'stats.stars': -1 };
     }
 
     const workflows = await this.find(query)

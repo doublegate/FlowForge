@@ -103,7 +103,7 @@ describe('useKeyboardShortcuts', () => {
       { ...commonShortcuts.undo, action: mockAction },
     ];
 
-    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener');
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
 
     const { unmount } = renderHook(() =>
       useKeyboardShortcuts({ shortcuts, enabled: true })

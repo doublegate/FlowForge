@@ -27,7 +27,6 @@ const { Octokit } = require('@octokit/rest');
 const OpenAI = require('openai');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
-const morgan = require('morgan');
 const dotenv = require('dotenv');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
@@ -38,6 +37,7 @@ const path = require('path');
 const logger = require('./utils/logger');
 const requestLogger = require('./middleware/requestLogger');
 const errorLogger = require('./middleware/errorLogger');
+const { authenticate, optionalAuth } = require('./middleware/auth');
 
 // Import route modules
 const authRoutes = require('./routes/auth');
@@ -147,7 +147,7 @@ const ActionSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const Action = mongoose.model('Action', ActionSchema);
+const Action = mongoose.models.Action || mongoose.model('Action', ActionSchema);
 
 /**
  * Workflow Template Schema
@@ -164,7 +164,7 @@ const WorkflowTemplateSchema = new mongoose.Schema({
   timestamps: true
 });
 
-const WorkflowTemplate = mongoose.model('WorkflowTemplate', WorkflowTemplateSchema);
+const WorkflowTemplate = mongoose.models.WorkflowTemplate || mongoose.model('WorkflowTemplate', WorkflowTemplateSchema);
 
 /**
  * Workflow Schema
@@ -201,7 +201,7 @@ const WorkflowSchema = new mongoose.Schema({
 WorkflowSchema.index({ userId: 1, createdAt: -1 });
 WorkflowSchema.index({ isPublic: 1, createdAt: -1 });
 
-const Workflow = mongoose.model('Workflow', WorkflowSchema);
+const Workflow = mongoose.models.Workflow || mongoose.model('Workflow', WorkflowSchema);
 
 /**
  * Parse the Awesome Actions README to extract action repositories
@@ -1376,7 +1376,7 @@ app.post('/api/actions/update', async (req, res) => {
 app.use(errorLogger);
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   const statusCode = err.statusCode || 500;
 
   res.status(statusCode).json({

@@ -290,7 +290,7 @@ async function checkForWorkflows(owner, repo) {
     });
     
     return Array.isArray(data) && data.length > 0;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -673,7 +673,7 @@ async function searchForActionFile(owner, repo, path = '') {
     }
     
     return null;
-  } catch (error) {
+  } catch (_error) {
     // Ignore errors during search
     return null;
   }
@@ -1055,6 +1055,7 @@ function detectWorkflowCategory(workflowMetadata, repoName, topics = []) {
 
 // Export all utilities
 module.exports = {
+  checkForWorkflows,
   fetchAwesomeActions,
   fetchActionMetadata,
   fetchReusableWorkflows,

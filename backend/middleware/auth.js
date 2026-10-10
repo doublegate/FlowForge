@@ -99,7 +99,7 @@ async function optionalAuth(req, res, next) {
     }
 
     next();
-  } catch (error) {
+  } catch (_error) {
     // For optional auth, we don't fail on errors
     next();
   }
@@ -202,7 +202,7 @@ function requireOwnershipOrAdmin(resourceParam, getResource) {
       // Attach resource to request for use in route handler
       req.resource = resource;
       next();
-    } catch (error) {
+    } catch (_error) {
       return res.status(500).json({
         error: 'Server error',
         message: 'Failed to verify resource ownership'
@@ -238,6 +238,7 @@ function requireEmailVerified(req, res, next) {
 
 module.exports = {
   authenticate,
+  authenticateToken: authenticate,
   optionalAuth,
   requireAdmin,
   requireRole,

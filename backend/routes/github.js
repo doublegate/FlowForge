@@ -183,7 +183,7 @@ router.post('/workflows/:id/deploy', authenticateToken, async (req, res) => {
     // Check permission (editor or higher)
     // Fallback: if hasAccess is not defined, allow access if user is in editors array
     if (typeof workflow.hasAccess !== 'function') {
-      workflow.hasAccess = function(userId, role) {
+      workflow.hasAccess = function(userId, _role) {
         // Simple fallback: check if user is in editors array
         if (Array.isArray(this.editors)) {
           return this.editors.includes(userId);

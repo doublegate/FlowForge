@@ -128,26 +128,26 @@ router.get('/search', authenticateToken, async (req, res) => {
     // Determine sort order
     let sortOptions = {};
     switch (sortBy) {
-      case 'newest':
-        sortOptions = { createdAt: -1 };
-        break;
-      case 'oldest':
-        sortOptions = { createdAt: 1 };
-        break;
-      case 'name':
-        sortOptions = { name: 1 };
-        break;
-      case 'stars':
-        sortOptions = { 'stats.stars': -1 };
-        break;
-      case 'views':
-        sortOptions = { 'stats.views': -1 };
-        break;
-      case 'updated':
-        sortOptions = { updatedAt: -1 };
-        break;
-      default: // relevance
-        sortOptions = { _id: -1 }; // Default to newest if no text score
+    case 'newest':
+      sortOptions = { createdAt: -1 };
+      break;
+    case 'oldest':
+      sortOptions = { createdAt: 1 };
+      break;
+    case 'name':
+      sortOptions = { name: 1 };
+      break;
+    case 'stars':
+      sortOptions = { 'stats.stars': -1 };
+      break;
+    case 'views':
+      sortOptions = { 'stats.views': -1 };
+      break;
+    case 'updated':
+      sortOptions = { updatedAt: -1 };
+      break;
+    default: // relevance
+      sortOptions = { _id: -1 }; // Default to newest if no text score
     }
 
     // Execute search
@@ -862,7 +862,7 @@ router.post('/import', authenticateToken, async (req, res) => {
     } else {
       try {
         workflowData = typeof data === 'string' ? JSON.parse(data) : data;
-      } catch (parseError) {
+      } catch (_parseError) {
         return res.status(400).json({ error: 'Invalid JSON format' });
       }
     }
@@ -943,7 +943,7 @@ router.post('/validate-import', authenticateToken, async (req, res) => {
     } else {
       try {
         workflowData = typeof data === 'string' ? JSON.parse(data) : data;
-      } catch (parseError) {
+      } catch (_parseError) {
         return res.status(400).json({
           valid: false,
           error: 'Invalid JSON format'

@@ -36,6 +36,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.64.0",
+    "@testing-library/react": "^16.3.3",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
@@ -52,5 +54,12 @@
     "typescript": "^5.3.3",
     "vite": "^6.4.1",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "braces": "^3.0.3",
+    "picomatch": ">=2.3.2",
+    "postcss-selector-parser": ">=7.1.6",
+    "tinypool": ">=2.1.2",
+    "@vitest/mocker": ">=4.1.11"
   }
 }

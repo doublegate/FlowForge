@@ -87,11 +87,11 @@ function exportToYAML(workflow, options = {}) {
     yamlContent += `# Workflow: ${workflow.name}\n`;
     yamlContent += `# Description: ${workflow.description || 'No description'}\n`;
     yamlContent += `# Exported from FlowForge on ${new Date().toISOString()}\n`;
-    yamlContent += `#\n`;
+    yamlContent += '#\n';
     if (workflow.tags && workflow.tags.length > 0) {
       yamlContent += `# Tags: ${workflow.tags.join(', ')}\n`;
     }
-    yamlContent += `\n`;
+    yamlContent += '\n';
   }
 
   // Use the workflow's YAML if available, otherwise generate from nodes
@@ -235,7 +235,7 @@ function parseYAML(yamlContent) {
     // Convert YAML steps to nodes
     if (parsed.jobs) {
       let nodeIndex = 0;
-      Object.entries(parsed.jobs).forEach(([jobId, job]) => {
+      Object.entries(parsed.jobs).forEach(([_jobId, job]) => {
         if (job.steps && Array.isArray(job.steps)) {
           job.steps.forEach((step, stepIndex) => {
             const nodeId = `node-${nodeIndex++}`;

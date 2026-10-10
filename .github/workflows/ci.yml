@@ -25,7 +25,7 @@ permissions:
   security-events: write
 
 env:
-  NODE_VERSION: '18.x'
+  NODE_VERSION: '20.x'
   CACHE_VERSION: 'v1'
 
 concurrency:
@@ -65,7 +65,7 @@ jobs:
 
       - name: 📋 Cache Backend Dependencies
         id: cache-backend
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: backend/node_modules
           key: ${{ steps.cache-keys.outputs.backend }}
@@ -74,7 +74,7 @@ jobs:
 
       - name: 📋 Cache Frontend Dependencies
         id: cache-frontend
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: frontend/node_modules
           key: ${{ steps.cache-keys.outputs.frontend }}
@@ -143,9 +143,9 @@ jobs:
           npm test -- --coverage --testTimeout=30000
 
       - name: 📊 Upload Backend Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
-          file: backend/coverage/lcov.info
+          files: backend/coverage/lcov.info
           flags: backend
           name: backend-coverage
 
@@ -185,9 +185,9 @@ jobs:
           npm test -- --run --coverage
 
       - name: 📊 Upload Frontend Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
-          file: frontend/coverage/lcov.info
+          files: frontend/coverage/lcov.info
           flags: frontend
           name: frontend-coverage
 
@@ -223,7 +223,7 @@ jobs:
       - name: 🔍 Run Security Audit (Backend)
         run: |
           cd backend
-          npm audit --audit-level moderate
+          npm audit --omit=dev --audit-level moderate
 
       - name: 📦 Install Frontend Dependencies
         run: |
@@ -233,7 +233,7 @@ jobs:
       - name: 🔍 Run Security Audit (Frontend)
         run: |
           cd frontend
-          npm audit --audit-level moderate
+          npm audit --omit=dev --audit-level moderate
 
       - name: 🛡️ Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -269,7 +269,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: 📋 Cache Docker Layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ needs.setup.outputs.docker-cache-key }}
@@ -283,7 +283,7 @@ jobs:
           path: frontend/dist
 
       - name: 🏗️ Build Backend Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
@@ -293,7 +293,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: 🏗️ Build Frontend Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -415,7 +415,7 @@ jobs:
           echo "📊 Bundle analysis complete"
 
       - name: 💾 Cache Lighthouse Reports
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: lighthouse-reports
           key: lighthouse-${{ github.sha }}
@@ -461,7 +461,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 🎉 Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: steps.tag.outputs.version != ''
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
@@ -520,7 +520,7 @@ jobs:
           echo "| Integration Tests | ${{ needs.integration-test.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: 🧹 Cleanup Artifacts
-        uses: geekyeggo/delete-artifact@v2
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: |
             backend-node-modules

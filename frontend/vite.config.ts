@@ -16,11 +16,21 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'react-flow': ['reactflow'],
-          'editor': ['@monaco-editor/react'],
-          'ui': ['axios', 'lucide-react', 'js-yaml']
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('/react/') || id.includes('/react-dom/') || id.includes('/react-router')) {
+              return 'react-vendor'
+            }
+            if (id.includes('/reactflow/') || id.includes('/@reactflow/')) {
+              return 'react-flow'
+            }
+            if (id.includes('/@monaco-editor/')) {
+              return 'editor'
+            }
+            if (id.includes('/axios/') || id.includes('/lucide-react/') || id.includes('/js-yaml/')) {
+              return 'ui'
+            }
+          }
         }
       }
     },

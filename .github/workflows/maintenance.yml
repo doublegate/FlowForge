@@ -40,6 +40,8 @@ jobs:
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v7
@@ -75,6 +77,8 @@ jobs:
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v7
@@ -116,6 +120,8 @@ jobs:
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: 🧹 Clear GitHub Actions Cache
         run: |

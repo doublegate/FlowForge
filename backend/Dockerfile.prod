@@ -1,7 +1,7 @@
 # Production Dockerfile for Backend
 # Multi-stage build for optimized image size
 
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set working directory
 WORKDIR /app
@@ -19,7 +19,7 @@ COPY . .
 RUN rm -rf tests/ *.test.js *.spec.js
 
 # Production stage
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init

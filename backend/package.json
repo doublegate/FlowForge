@@ -65,8 +65,8 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "eslint": "^9.39.5",
-    "jest": "^29.7.0",
-    "nodemon": "^3.1.14"
+    "jest": "^25.1.0",
+    "nodemon": "^3.1.11"
   },
   "engines": {
     "node": ">=22.12.0"
